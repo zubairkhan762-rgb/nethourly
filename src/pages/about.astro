@@ -1,0 +1,391 @@
+---
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import Layout from '../layouts/Layout.astro';
+
+const breadcrumbs = [
+	{ label: 'Home', href: '/' },
+	{ label: 'Methodology & Disclaimer' },
+];
+---
+
+<Layout
+	title="Methodology & US FLSA Disclaimer | NetHourly"
+	description="How NetHourly calculates gross pay, 26 bi-weekly pay periods, FLSA overtime, 24-hour shift sleep and meal deductions, and estimated US take-home pay."
+>
+	<Breadcrumbs items={breadcrumbs} />
+
+	<section class="page-hero">
+		<div class="mesh" aria-hidden="true"></div>
+		<div class="shell hero-inner">
+			<p class="eyebrow mono">Methodology · US payroll · FLSA</p>
+			<h1>How NetHourly calculates pay.</h1>
+			<p class="lede">
+				Every figure on NetHourly comes from the same US payroll conventions: a 52-week year,
+				FLSA overtime after 40 hours, 26 bi-weekly pay periods, and clearly labeled tax
+				estimates. Here is exactly what each number means.
+			</p>
+		</div>
+	</section>
+
+	<section class="content">
+		<div class="shell content-grid">
+			<div class="prose">
+				<h2>Why NetHourly exists</h2>
+				<p>
+					Most workers do not need another finance blog. They need to know what a $22/hour
+					offer means on a bi-weekly check, why a 24-hour shift paid 13 hours instead of 24,
+					or why a big overtime check looked heavily taxed. Those questions have concrete
+					answers, and the answers should be visible.
+				</p>
+				<p>
+					NetHourly is an independent calculator and reference site for US hourly and shift
+					workers. The goal is to make the math legible: show the formula, label the
+					assumptions, and separate gross pay from take-home estimates. The site does not
+					collect payroll data and does not replace a payroll department, a tax preparer, or a
+					lawyer.
+				</p>
+
+				<h2>1. Gross pay and pay periods</h2>
+				<p>
+					Gross pay is pay before any tax withholding or deductions. For an hourly worker, the
+					baseline is 40 hours per week for 52 weeks, or 2,080 hours per year. Weekly gross is
+					the hourly rate × 40. Annual gross is weekly gross × 52.
+				</p>
+				<div class="formula">Annual gross = hourly rate × 40 hours × 52 weeks</div>
+				<p>
+					Pay frequency changes the size of each paycheck, not the annual total:
+				</p>
+				<ul>
+					<li><strong>Weekly:</strong> annual gross ÷ 52 paychecks.</li>
+					<li><strong>Bi-weekly:</strong> annual gross ÷ 26 paychecks — the most common US schedule.</li>
+					<li><strong>Semi-monthly:</strong> annual gross ÷ 24 paychecks, usually paid on the 1st and 15th.</li>
+					<li><strong>Monthly:</strong> annual gross ÷ 12 paychecks.</li>
+				</ul>
+				<p>
+					Bi-weekly and semi-monthly are not interchangeable. Twenty-six bi-weekly checks are
+					smaller than twenty-four semi-monthly checks, even though annual gross is identical.
+				</p>
+
+				<h2>2. FLSA overtime</h2>
+				<p>
+					Under the federal Fair Labor Standards Act, most non-exempt employees earn 1.5× their
+					regular rate for hours worked beyond 40 in a fixed 7-day workweek. Double time is 2×
+					and is not required by federal law, but may apply under state law, a union contract, or
+					employer policy.
+				</p>
+				<div class="formula">Overtime pay = overtime hours × hourly rate × 1.5</div>
+				<div class="formula">Double-time pay = double-time hours × hourly rate × 2</div>
+				<p>
+					Some states add daily overtime. California, for example, pays 1.5× after 8 hours in a
+					workday and 2× after 12 hours. The 24-hour shift calculator supports both the federal
+					weekly method and the California daily split.
+				</p>
+
+				<h2>3. 24-hour shifts, sleep, and meals</h2>
+				<p>
+					A 24-hour shift is not automatically 24 paid hours. FLSA rules allow employers to
+					exclude up to 8 hours of sleep time only when the worker receives at least 5 hours of
+					uninterrupted sleep. Up to 3 duty-free meal hours — typically one hour each for
+					breakfast, lunch, and dinner — may also be excluded.
+				</p>
+				<div class="formula">Payable hours = 24 − sleep deduction − meal deduction</div>
+				<p>
+					With the full 8 sleep hours and 3 meal hours excluded, 13 of the 24 hours remain
+					payable. If the worker must remain on duty, or sleep is interrupted below the 5-hour
+					threshold, the time is generally compensable. Actual arrangements depend on the
+					employment relationship and applicable state rules.
+				</p>
+
+				<h2>4. Estimated take-home pay</h2>
+				<p>
+					NetHourly does not prepare tax returns. The take-home toggle applies simplified,
+					flat-rate estimates to gross pay:
+				</p>
+				<ul>
+					<li><strong>FICA only:</strong> 7.65% — 6.2% Social Security plus 1.45% Medicare.</li>
+					<li><strong>Standard single filer:</strong> about 18% — FICA plus roughly 10.35% effective federal income tax.</li>
+					<li><strong>High-tax state:</strong> about 24% — adds state income tax for places such as California, New York, New Jersey, and Oregon.</li>
+					<li><strong>No-income-tax state:</strong> about 15% — FICA plus federal tax only, for places such as Texas, Florida, Washington, and Nevada.</li>
+				</ul>
+				<p>
+					Real withholding depends on filing status, dependents, pre-tax deductions, credits,
+					and state or local rules. Use the estimates to compare scenarios, not to calculate an
+					exact paycheck.
+				</p>
+
+				<h2>5. Sources and further reading</h2>
+				<p>
+					These are the primary references behind the calculators. Rules change; check the
+					current version before relying on a figure.
+				</p>
+				<ul>
+					<li>
+						<a href="https://www.dol.gov/agencies/whd" rel="noopener noreferrer">
+							US Department of Labor, Wage and Hour Division
+						</a>
+					</li>
+					<li>
+						<a
+							href="https://www.dol.gov/agencies/whd/fact-sheets/23-flsa-overtime-pay"
+							rel="noopener noreferrer"
+						>
+							DOL Fact Sheet #23: Overtime Pay
+						</a>
+					</li>
+					<li>
+						<a
+							href="https://www.ecfr.gov/current/title-29/subtitle-B/chapter-V/subchapter-A/part-785/subpart-C/section-785.22"
+							rel="noopener noreferrer"
+						>
+							29 CFR § 785.22: Sleep time
+						</a>
+					</li>
+					<li>
+						<a href="https://www.dir.ca.gov/dlse/faq_overtime.htm" rel="noopener noreferrer">
+							California DIR: Overtime FAQ
+						</a>
+					</li>
+					<li>
+						<a href="https://www.irs.gov/publications/p15" rel="noopener noreferrer">
+							IRS Publication 15: Employer's Tax Guide
+						</a>
+					</li>
+				</ul>
+
+				<h2>6. Methodology &amp; US FLSA disclaimer</h2>
+
+				<p>
+					NetHourly is an independent educational calculator. It is not a payroll provider, law
+					firm, or tax adviser, and it is not affiliated with the US Department of Labor or any
+					state agency. Wage and hour law is fact-specific and changes over time. Overtime
+					eligibility, sleep and meal exclusions, and state daily overtime rules depend on the
+					worker's duties, employment agreement, and location.
+				</p>
+				<p>
+					Always confirm current rules with the US Department of Labor, your state labor office,
+					or a qualified payroll or legal professional before relying on a figure for a
+					paycheck, contract, or dispute.
+				</p>
+			</div>
+
+			<aside class="summary-card" aria-label="Calculation summary">
+				<span class="mono">At a glance</span>
+				<div class="summary-row">
+					<span>Full-time baseline</span>
+					<code>40 hrs × 52 weeks</code>
+				</div>
+				<div class="summary-row">
+					<span>Annual gross</span>
+					<code>rate × 2,080</code>
+				</div>
+				<div class="summary-row">
+					<span>Bi-weekly</span>
+					<code>annual ÷ 26</code>
+				</div>
+				<div class="summary-row">
+					<span>Semi-monthly</span>
+					<code>annual ÷ 24</code>
+				</div>
+				<div class="summary-row">
+					<span>FLSA overtime</span>
+					<code>rate × 1.5 after 40</code>
+				</div>
+				<div class="summary-row">
+					<span>FICA</span>
+					<code>7.65% of gross</code>
+				</div>
+				<div class="summary-row">
+					<span>Standard estimate</span>
+					<code>~18% total</code>
+				</div>
+				<a class="button button-primary" href="/#calculator-band">Run your numbers</a>
+			</aside>
+		</div>
+	</section>
+</Layout>
+
+<style>
+	.page-hero {
+		position: relative;
+		overflow: hidden;
+		padding: 72px 0 48px;
+		text-align: center;
+	}
+
+	.mesh {
+		position: absolute;
+		inset: -280px -10% auto;
+		height: 640px;
+		background:
+			radial-gradient(38% 55% at 18% 42%, rgba(0, 124, 240, 0.28), transparent 70%),
+			radial-gradient(32% 50% at 44% 20%, rgba(121, 40, 202, 0.22), transparent 72%),
+			radial-gradient(38% 55% at 70% 44%, rgba(255, 0, 128, 0.15), transparent 72%),
+			radial-gradient(30% 48% at 88% 22%, rgba(249, 203, 40, 0.2), transparent 72%);
+		filter: blur(36px);
+		pointer-events: none;
+		-webkit-mask-image: linear-gradient(to bottom, #000 40%, transparent 100%);
+		mask-image: linear-gradient(to bottom, #000 40%, transparent 100%);
+	}
+
+	.hero-inner {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.hero-inner .eyebrow {
+		color: var(--mute);
+	}
+
+	h1 {
+		max-width: 860px;
+		margin: 20px 0 0;
+		font-size: clamp(38px, 6.4vw, 62px);
+		font-weight: 600;
+		line-height: 1;
+		letter-spacing: -2.8px;
+	}
+
+	.lede {
+		max-width: 700px;
+		margin: 18px 0 0;
+		font-size: 17px;
+		line-height: 27px;
+		color: var(--body);
+	}
+
+	.content {
+		padding: 64px 0 96px;
+		border-top: 1px solid var(--hairline);
+	}
+
+	.content-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) 320px;
+		gap: 64px;
+		align-items: start;
+	}
+
+	.prose {
+		max-width: 720px;
+	}
+
+	.prose h2 {
+		margin: 40px 0 0;
+		font-size: clamp(24px, 3.2vw, 32px);
+		font-weight: 600;
+		line-height: 1.15;
+		letter-spacing: -1.2px;
+	}
+
+	.prose h2:first-child {
+		margin-top: 0;
+	}
+
+	.prose p {
+		margin: 12px 0 0;
+		font-size: 15px;
+		line-height: 26px;
+		color: var(--body);
+	}
+
+	.prose ul {
+		margin: 14px 0 0;
+		padding: 0 0 0 20px;
+	}
+
+	.prose li {
+		margin: 8px 0 0;
+		font-size: 15px;
+		line-height: 25px;
+		color: var(--body);
+	}
+
+	.prose strong {
+		color: var(--ink);
+		font-weight: 500;
+	}
+
+	.formula {
+		margin: 14px 0 0;
+		padding: 10px 12px;
+		border: 1px solid var(--hairline);
+		border-radius: 6px;
+		background: var(--canvas-elevated);
+		font-family: var(--font-mono);
+		font-size: 12px;
+		line-height: 18px;
+		color: var(--ink);
+	}
+
+	.summary-card {
+		position: sticky;
+		top: 96px;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		padding: 20px;
+		border: 1px solid var(--hairline);
+		border-radius: 12px;
+		background: var(--canvas-elevated);
+	}
+
+	.summary-card > .mono {
+		color: var(--mute);
+	}
+
+	.summary-row {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		padding-top: 12px;
+		border-top: 1px solid var(--hairline-soft);
+	}
+
+	.summary-row span {
+		font-size: 12px;
+		color: var(--mute);
+	}
+
+	.summary-row code {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		color: var(--ink);
+	}
+
+	.summary-card .button {
+		margin-top: 8px;
+	}
+
+	@media (max-width: 960px) {
+		.content-grid {
+			grid-template-columns: 1fr;
+			gap: 32px;
+		}
+
+		.summary-card {
+			position: static;
+		}
+	}
+
+	@media (max-width: 640px) {
+		.page-hero {
+			padding: 52px 0 36px;
+		}
+
+		h1 {
+			letter-spacing: -2px;
+		}
+
+		.lede {
+			font-size: 15px;
+			line-height: 24px;
+		}
+
+		.content {
+			padding: 48px 0 72px;
+		}
+	}
+</style>

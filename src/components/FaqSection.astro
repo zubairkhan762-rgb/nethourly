@@ -1,0 +1,212 @@
+---
+import { faqSchema, type FaqItem } from '../lib/seo';
+
+interface Props {
+	items: FaqItem[];
+	eyebrow?: string;
+	title?: string;
+	description?: string;
+	id?: string;
+}
+
+const {
+	items,
+	eyebrow = 'Questions',
+	title = 'Pay rules, plainly.',
+	description = 'Common edge cases behind the numbers.',
+	id = 'faq',
+} = Astro.props;
+
+const schema = faqSchema(items);
+---
+
+<section class="faq-section" id={id} aria-labelledby={`${id}-title`}>
+	<div class="shell faq-grid">
+		<div class="faq-head">
+			<p class="eyebrow mono">{eyebrow}</p>
+			<h2 id={`${id}-title`}>{title}</h2>
+			<p>{description}</p>
+		</div>
+		<div class="faq-list">
+			{items.map((item) => (
+				<details>
+					<summary>{item.question}</summary>
+					<p>{item.answer}</p>
+				</details>
+			))}
+		</div>
+	</div>
+</section>
+
+<script
+	type="application/ld+json"
+	set:html={JSON.stringify(schema)}
+	is:inline
+/>
+
+<style>
+	.faq-section {
+		padding: 80px 0;
+		border-top: 1px solid var(--hairline);
+	}
+
+	.faq-grid {
+		display: grid;
+		grid-template-columns: 320px minmax(0, 1fr);
+		gap: 64px;
+		align-items: start;
+	}
+
+	.faq-head {
+		position: sticky;
+		top: 96px;
+	}
+
+	.faq-head .eyebrow {
+		color: var(--mute);
+	}
+
+	.faq-head h2 {
+		margin: 12px 0 0;
+		font-size: clamp(28px, 4vw, 40px);
+		font-weight: 600;
+		line-height: 1.1;
+		letter-spacing: -1.6px;
+	}
+
+	.faq-head > p:last-child {
+		margin: 12px 0 0;
+		font-size: 15px;
+		line-height: 25px;
+		color: var(--body);
+	}
+
+	.faq-list {
+		border-top: 1px solid var(--hairline);
+	}
+
+	.faq-list details {
+		border-bottom: 1px solid var(--hairline);
+	}
+
+	.faq-list summary {
+		position: relative;
+		padding: 20px 44px 20px 0;
+		list-style: none;
+		cursor: pointer;
+		font-size: 16px;
+		font-weight: 500;
+		line-height: 24px;
+		color: var(--ink);
+		transition: color 0.15s ease;
+	}
+
+	.faq-list summary::-webkit-details-marker {
+		display: none;
+	}
+
+	.faq-list summary::after {
+		content: '+';
+		position: absolute;
+		top: 50%;
+		right: 4px;
+		display: grid;
+		place-items: center;
+		width: 24px;
+		height: 24px;
+		transform: translateY(-50%);
+		border: 1px solid var(--hairline);
+		border-radius: 50%;
+		font-size: 16px;
+		font-weight: 400;
+		line-height: 1;
+		color: var(--mute);
+		transition:
+			transform 0.18s ease,
+			border-color 0.18s ease,
+			color 0.18s ease;
+	}
+
+	.faq-list summary:hover {
+		color: var(--ink);
+	}
+
+	.faq-list summary:hover::after {
+		border-color: #d4d4d4;
+		color: var(--ink);
+	}
+
+	.faq-list details[open] summary::after {
+		transform: translateY(-50%) rotate(45deg);
+		border-color: var(--ink);
+		color: var(--ink);
+	}
+
+	.faq-list p {
+		max-width: 680px;
+		margin: 0;
+		padding: 0 44px 22px 0;
+		font-size: 14px;
+		line-height: 23px;
+		color: var(--body);
+	}
+
+	.faq-list details[open] p {
+		animation: faq-reveal 0.18s ease;
+	}
+
+	@keyframes faq-reveal {
+		from {
+			opacity: 0;
+			transform: translateY(-2px);
+		}
+
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	.faq-list p a {
+		color: var(--ink);
+		text-decoration: underline;
+		text-underline-offset: 3px;
+	}
+
+	@media (max-width: 900px) {
+		.faq-grid {
+			grid-template-columns: 1fr;
+			gap: 32px;
+		}
+
+		.faq-head {
+			position: static;
+			max-width: 560px;
+		}
+	}
+
+	@media (max-width: 640px) {
+		.faq-section {
+			padding: 64px 0;
+		}
+
+		.faq-list summary {
+			font-size: 15px;
+			line-height: 22px;
+		}
+
+		.faq-list p {
+			padding-right: 32px;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.faq-list details[open] p {
+			animation: none;
+		}
+
+		.faq-list summary::after {
+			transition: none;
+		}
+	}
+</style>

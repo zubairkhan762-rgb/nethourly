@@ -1,0 +1,98 @@
+---
+import LegalPage from '../components/LegalPage.astro';
+
+const toc = [
+	{ id: 'email', label: 'Email us' },
+	{ id: 'corrections', label: 'Report a correction' },
+	{ id: 'what-to-send', label: 'What to include' },
+	{ id: 'what-not-to-send', label: 'What not to send' },
+	{ id: 'response', label: 'Response time' },
+	{ id: 'disputes', label: 'Pay disputes' },
+];
+---
+
+<LegalPage
+	title="Contact NetHourly | Corrections & Support"
+	description="Contact NetHourly with calculator corrections, broken links, or privacy questions. Send the page URL and the numbers involved; do not send Social Security or bank details."
+	eyebrow="Contact · corrections · support"
+	heading="Contact NetHourly."
+	lede="Found a wrong number, a broken link, or a page that needs a correction? Send the details. We read every message, but we cannot provide payroll, legal, or tax advice for an individual dispute."
+	updated="October 27, 2026"
+	breadcrumbLabel="Contact"
+	toc={toc}
+>
+	<h2 id="email">Email us</h2>
+	<p>
+		The best way to reach us is email:{' '}
+		<a href="mailto:hello@nethourly.com">hello@nethourly.com</a>. Put the topic in the
+		subject line — for example, “Correction: 24-hour shift calculator” or “Privacy request.”
+		That helps us route the message without asking you to repeat it.
+	</p>
+	<p>
+		We are a small independent site. Email is the most reliable channel. We do not offer
+		phone support or live chat.
+	</p>
+
+	<h2 id="corrections">Report a correction</h2>
+	<p>
+		If a calculator result looks wrong, include the page URL and the exact inputs you used.
+		For a pay page, tell us the hourly rate, hours per week, state, and pay frequency. For a
+		24-hour shift, tell us the shift length, sleep deduction, meal deduction, and whether
+		you used the federal or California method. For overtime, tell us the regular rate, regular
+		hours, overtime hours, and any differential or bonus.
+	</p>
+	<p>
+		Also tell us what you expected and what the page showed. A screenshot helps, but redact
+		your name, employee ID, address, and account numbers first. If you are comparing the
+		result to a real stub, include the gross pay and the deduction lines — not the full
+		document.
+	</p>
+
+	<h2 id="what-to-send">What to include</h2>
+	<ul>
+		<li>The page URL and the calculator or table you used.</li>
+		<li>The numbers you entered and the result you saw.</li>
+		<li>Your state, if the question depends on state overtime or tax rules.</li>
+		<li>The source you are comparing against, such as a pay stub or official notice.</li>
+		<li>A clear subject line and a preferred reply address.</li>
+	</ul>
+
+	<h2 id="what-not-to-send">What not to send</h2>
+	<p>
+		Do not send Social Security numbers, bank account or routing numbers, full payroll stubs,
+		medical records, or employer login credentials. We do not need them to check a
+		calculator. If you already sent sensitive information, tell us and we will delete the
+		message.
+	</p>
+	<div class="legal-note">
+		<p>
+			<strong>We cannot review your whole employment history.</strong> We can check whether a
+			calculator follows its stated formula. We cannot decide whether your employer violated
+			the law, calculate a settlement, or tell you whether to sign an agreement.
+		</p>
+	</div>
+
+	<h2 id="response">Response time</h2>
+	<p>
+		We aim to reply within two to three business days. Correction reports with a page URL and
+		reproducible inputs are easiest to act on. Privacy and deletion requests may take longer
+		if we need to verify what information we hold. We do not guarantee a response to
+		unsolicited sales, SEO, or link-placement messages.
+	</p>
+
+	<h2 id="disputes">Pay disputes and legal questions</h2>
+	<p>
+		For an unpaid wage, overtime, or classification dispute, contact the{' '}
+		<a href="https://www.dol.gov/agencies/whd" rel="noopener noreferrer">
+			US Department of Labor Wage and Hour Division
+		</a>
+		, your state labor office, a union representative, or a qualified employment attorney.
+		Deadlines can be short. Do not wait for a reply from a calculator site before protecting
+		your claim.
+	</p>
+	<p>
+		For tax withholding questions, contact a CPA or tax preparer, or review IRS Publication
+		15 and the IRS Tax Withholding Estimator. NetHourly's 18% estimate is a planning number,
+		not a tax return.
+	</p>
+</LegalPage>

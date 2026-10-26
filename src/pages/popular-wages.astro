@@ -1,0 +1,613 @@
+---
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import Layout from '../layouts/Layout.astro';
+import {
+	STATE_MINIMUM_WAGES,
+	WAGES,
+	WAGE_CATEGORIES,
+	formatRate,
+	formatUSD,
+	getWageStats,
+	getWagesForCategory,
+} from '../data/wages';
+
+const money = (value: number) => formatUSD(value, 0);
+const rateMoney = (value: number) => formatRate(value);
+
+const categories = WAGE_CATEGORIES.map((category) => ({
+	...category,
+	wages: getWagesForCategory(category),
+}));
+
+const title = `Popular Hourly Wages — ${WAGES.length} Salary Guides | Nethourly`;
+const description =
+	`Browse ${WAGES.length} hourly wage guides from $7.25 to $100 an hour. See annual gross pay, bi-weekly take-home, overtime rates, and a full pay-period breakdown for every rate.`;
+---
+
+<Layout title={title} description={description}>
+	<Breadcrumbs
+		items={[
+			{ label: 'Home', href: '/' },
+			{ label: 'Popular Wages' },
+		]}
+	/>
+	<section class="page-hero">
+		<div class="mesh" aria-hidden="true"></div>
+		<div class="shell hero-inner">
+			<p class="eyebrow mono">Wage directory · 40 hrs/week · 52 weeks</p>
+			<h1>Popular hourly wages.</h1>
+			<p class="lede">
+				Every hourly rate from the federal minimum wage to $100 an hour, with annual gross
+				pay, bi-weekly take-home, overtime premiums, and a full pay-period breakdown. Pick a
+				rate to see the math.
+			</p>
+			<ul class="hero-stats">
+				<li><strong>{WAGES.length}</strong> wage guides</li>
+				<li><strong>$7.25</strong> federal floor</li>
+				<li><strong>$100</strong> top rate</li>
+				<li><strong>18%</strong> standard tax estimate</li>
+			</ul>
+		</div>
+	</section>
+
+	<section class="directory">
+		<div class="shell">
+			<nav class="jump-bar" aria-label="Wage categories">
+				{categories.map((category) => (
+					<a href={`#${category.id}`}>
+						{category.title}{' '}
+						<span>{category.wages.length}</span>
+					</a>
+				))}
+			</nav>
+
+			{categories.map((category) => (
+				<section class="category" id={category.id}>
+					<div class="category-head">
+						<div>
+							<p class="eyebrow mono">{category.range}</p>
+							<h2>{category.title}</h2>
+							<p>{category.description}</p>
+						</div>
+						<span class="count mono">{category.wages.length} guides</span>
+					</div>
+
+					<div class="wage-grid">
+						{category.wages.map((wage) => {
+							const stats = getWageStats(wage.rate);
+							return (
+								<a class="wage-card" href={`/wage/${wage.slug}`}>
+									<span class="wage-rate">
+										{wage.display}
+										<span>/hr</span>
+									</span>
+									{wage.note && <span class="wage-note">{wage.note}</span>}
+									<dl class="wage-stats">
+										<div>
+											<dt>Annual gross</dt>
+											<dd>{money(stats.annual)}</dd>
+										</div>
+										<div>
+											<dt>Bi-weekly</dt>
+											<dd>{money(stats.biWeekly)}</dd>
+										</div>
+										<div>
+											<dt>1.5× overtime</dt>
+											<dd>{rateMoney(stats.overtimeRate)}</dd>
+										</div>
+									</dl>
+									<span class="wage-link mono">View breakdown →</span>
+								</a>
+							);
+						})}
+					</div>
+				</section>
+			))}
+		</div>
+	</section>
+
+	<section class="state-section" id="state-minimums">
+		<div class="shell">
+			<div class="section-head">
+				<p class="eyebrow mono">State reference</p>
+				<h2>State minimum wages at a glance.</h2>
+				<p>
+					Compare key state minimums against the federal floor. Many cities set higher local
+					rates, and some industries — like California fast food — have separate standards.
+				</p>
+			</div>
+
+			<div class="table-card">
+				<div class="table-scroll">
+					<table>
+						<caption class="sr-only">Key US state minimum wages</caption>
+						<thead>
+							<tr>
+								<th scope="col">State</th>
+								<th scope="col">Code</th>
+								<th scope="col">Notes</th>
+								<th scope="col" class="num">Minimum wage</th>
+								<th scope="col" class="num">Annual at 40 hrs</th>
+							</tr>
+						</thead>
+						<tbody>
+							{STATE_MINIMUM_WAGES.map((item) => (
+								<tr>
+									<th scope="row">{item.state}</th>
+									<td>{item.abbr}</td>
+									<td class="muted">{item.note}</td>
+									<td class="num">{rateMoney(item.rate)}</td>
+									<td class="num">{money(item.rate * 2080)}</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
+			</div>
+			<p class="table-footnote">
+				Reference values only — minimum wages change annually and vary by city, industry, and
+				employer size. Confirm the current rate with your state labor office. Annual values
+				assume 2,080 hours (40 hours × 52 weeks).
+			</p>
+		</div>
+	</section>
+
+	<section class="closing">
+		<div class="shell closing-inner">
+			<div>
+				<p class="eyebrow mono">Next step</p>
+				<h2>Run your own numbers.</h2>
+				<p>
+					Every wage guide embeds the full calculator. Start from any rate, then change hours,
+					overtime, or the tax tier to match your actual paycheck.
+				</p>
+			</div>
+			<div class="closing-actions">
+				<a class="button button-primary" href="/#calculator-band">Open the calculator</a>
+				<a class="button button-secondary" href="/overtime-calculator">Overtime calculator</a>
+			</div>
+		</div>
+	</section>
+</Layout>
+
+<style>
+	.page-hero {
+		position: relative;
+		overflow: hidden;
+		padding: 72px 0 48px;
+		text-align: center;
+	}
+
+	.mesh {
+		position: absolute;
+		inset: -280px -10% auto;
+		height: 640px;
+		background:
+			radial-gradient(38% 55% at 18% 42%, rgba(0, 124, 240, 0.28), transparent 70%),
+			radial-gradient(32% 50% at 44% 20%, rgba(121, 40, 202, 0.22), transparent 72%),
+			radial-gradient(38% 55% at 70% 44%, rgba(255, 0, 128, 0.15), transparent 72%),
+			radial-gradient(30% 48% at 88% 22%, rgba(249, 203, 40, 0.2), transparent 72%);
+		filter: blur(36px);
+		pointer-events: none;
+		-webkit-mask-image: linear-gradient(to bottom, #000 40%, transparent 100%);
+		mask-image: linear-gradient(to bottom, #000 40%, transparent 100%);
+	}
+
+	.hero-inner {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.hero-inner h1 {
+		max-width: 860px;
+		margin: 20px 0 0;
+		font-size: clamp(38px, 6.4vw, 62px);
+		font-weight: 600;
+		line-height: 1;
+		letter-spacing: -2.8px;
+	}
+
+	.lede {
+		max-width: 680px;
+		margin: 18px 0 0;
+		font-size: 17px;
+		line-height: 27px;
+		color: var(--body);
+	}
+
+	.hero-stats {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 10px 24px;
+		margin: 28px 0 0;
+		padding: 0;
+		list-style: none;
+		font-size: 13px;
+		color: var(--mute);
+	}
+
+	.hero-stats strong {
+		color: var(--ink);
+		font-weight: 500;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.directory {
+		padding: 24px 0 40px;
+	}
+
+	.jump-bar {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		padding: 16px 0 28px;
+		border-top: 1px solid var(--hairline);
+		border-bottom: 1px solid var(--hairline);
+	}
+
+	.jump-bar a {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		padding: 8px 14px;
+		border: 1px solid var(--hairline);
+		border-radius: 100px;
+		background: var(--canvas-elevated);
+		font-size: 13px;
+		font-weight: 500;
+		color: var(--ink);
+		transition: border-color 0.15s ease;
+	}
+
+	.jump-bar a:hover {
+		border-color: #d4d4d4;
+	}
+
+	.jump-bar a span {
+		font-size: 11px;
+		font-weight: 500;
+		color: var(--mute);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.category {
+		padding: 56px 0 8px;
+		border-bottom: 1px solid var(--hairline);
+		scroll-margin-top: 88px;
+	}
+
+	.category:last-of-type {
+		border-bottom: 0;
+	}
+
+	.category-head {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 24px;
+		margin-bottom: 24px;
+	}
+
+	.category-head .eyebrow {
+		color: var(--mute);
+	}
+
+	.category-head h2 {
+		margin: 12px 0 0;
+		font-size: clamp(24px, 3.2vw, 32px);
+		font-weight: 600;
+		line-height: 1.15;
+		letter-spacing: -1.2px;
+	}
+
+	.category-head p:last-child {
+		max-width: 680px;
+		margin: 10px 0 0;
+		font-size: 14px;
+		line-height: 23px;
+		color: var(--body);
+	}
+
+	.count {
+		flex: none;
+		padding: 5px 11px;
+		border: 1px solid var(--hairline);
+		border-radius: 100px;
+		color: var(--mute);
+		font-size: 11px;
+	}
+
+	.wage-grid {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 10px;
+		padding-bottom: 32px;
+	}
+
+	.wage-card {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		padding: 18px;
+		border: 1px solid var(--hairline);
+		border-radius: 12px;
+		background: var(--canvas-elevated);
+		transition:
+			border-color 0.15s ease,
+			transform 0.15s ease;
+	}
+
+	.wage-card:hover {
+		border-color: #d4d4d4;
+		transform: translateY(-1px);
+	}
+
+	.wage-rate {
+		font-size: 24px;
+		font-weight: 600;
+		letter-spacing: -0.8px;
+		color: var(--ink);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.wage-rate span {
+		margin-left: 2px;
+		font-size: 13px;
+		font-weight: 500;
+		letter-spacing: 0;
+		color: var(--mute);
+	}
+
+	.wage-note {
+		margin-top: -4px;
+		font-size: 11px;
+		line-height: 15px;
+		color: var(--mute);
+	}
+
+	.wage-stats {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		margin: 0;
+		padding: 10px 0 0;
+		border-top: 1px solid var(--hairline-soft);
+	}
+
+	.wage-stats div {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 8px;
+	}
+
+	.wage-stats dt {
+		font-size: 11px;
+		color: var(--mute);
+	}
+
+	.wage-stats dd {
+		margin: 0;
+		font-size: 12px;
+		font-weight: 500;
+		color: var(--ink);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.wage-link {
+		margin-top: auto;
+		color: var(--faint);
+		font-size: 10px;
+		text-transform: none;
+		letter-spacing: 0;
+	}
+
+	.state-section {
+		padding: 80px 0;
+		border-top: 1px solid var(--hairline);
+	}
+
+	.section-head {
+		max-width: 720px;
+		margin-bottom: 24px;
+	}
+
+	.section-head .eyebrow {
+		color: var(--mute);
+	}
+
+	.section-head h2 {
+		margin: 12px 0 0;
+		font-size: clamp(26px, 3.6vw, 36px);
+		font-weight: 600;
+		line-height: 1.12;
+		letter-spacing: -1.4px;
+	}
+
+	.section-head p:last-child {
+		margin: 10px 0 0;
+		font-size: 15px;
+		line-height: 25px;
+		color: var(--body);
+	}
+
+	.table-card {
+		border: 1px solid var(--hairline);
+		border-radius: 14px;
+		background: var(--canvas-elevated);
+		overflow: hidden;
+	}
+
+	.table-scroll {
+		overflow-x: auto;
+	}
+
+	table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 14px;
+		font-variant-numeric: tabular-nums;
+	}
+
+	thead th {
+		padding: 12px 16px;
+		border-bottom: 1px solid var(--hairline);
+		text-align: left;
+		font-size: 11px;
+		font-weight: 500;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--mute);
+		white-space: nowrap;
+	}
+
+	tbody th,
+	tbody td {
+		padding: 13px 16px;
+		border-bottom: 1px solid var(--hairline-soft);
+		color: var(--ink);
+		white-space: nowrap;
+	}
+
+	tbody th {
+		text-align: left;
+		font-weight: 500;
+	}
+
+	tbody tr:last-child th,
+	tbody tr:last-child td {
+		border-bottom: 0;
+	}
+
+	tbody tr:hover th,
+	tbody tr:hover td {
+		background: var(--canvas);
+	}
+
+	.num {
+		text-align: right;
+	}
+
+	.muted {
+		color: var(--mute);
+	}
+
+	.table-footnote {
+		max-width: 900px;
+		margin: 14px 0 0;
+		font-size: 12px;
+		line-height: 18px;
+		color: var(--faint);
+	}
+
+	.closing {
+		padding: 64px 0 88px;
+		border-top: 1px solid var(--hairline);
+	}
+
+	.closing-inner {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 32px;
+		padding: 32px;
+		border: 1px solid var(--hairline);
+		border-radius: 16px;
+		background: var(--canvas-elevated);
+	}
+
+	.closing .eyebrow {
+		color: var(--mute);
+	}
+
+	.closing h2 {
+		margin: 12px 0 0;
+		font-size: clamp(24px, 3.2vw, 32px);
+		font-weight: 600;
+		letter-spacing: -1.2px;
+	}
+
+	.closing p:last-child {
+		max-width: 520px;
+		margin: 8px 0 0;
+		font-size: 14px;
+		line-height: 23px;
+		color: var(--body);
+	}
+
+	.closing-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+
+	@media (max-width: 1024px) {
+		.wage-grid {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+	}
+
+	@media (max-width: 900px) {
+		.wage-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.closing-inner {
+			align-items: flex-start;
+			flex-direction: column;
+		}
+	}
+
+	@media (max-width: 640px) {
+		.page-hero {
+			padding: 52px 0 36px;
+		}
+
+		.hero-inner h1 {
+			letter-spacing: -1.8px;
+		}
+
+		.lede {
+			font-size: 15px;
+			line-height: 24px;
+		}
+
+		.hero-stats {
+			gap: 8px 16px;
+		}
+
+		.category {
+			padding-top: 44px;
+		}
+
+		.category-head {
+			flex-direction: column;
+			gap: 10px;
+		}
+
+		.wage-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.state-section {
+			padding: 60px 0;
+		}
+
+		.closing {
+			padding: 48px 0 64px;
+		}
+
+		.closing-inner {
+			padding: 22px;
+		}
+
+		.closing-actions,
+		.closing-actions .button {
+			width: 100%;
+		}
+	}
+</style>

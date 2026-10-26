@@ -1,0 +1,114 @@
+---
+const pathname = Astro.url.pathname.replace(/\/+$/, '') || '/';
+
+const links = [
+	{ href: '/', label: 'Pay calculator' },
+	{ href: '/24-hour-shift-calculator', label: '24-hour shifts' },
+	{ href: '/overtime-calculator', label: 'Overtime' },
+	{ href: '/popular-wages', label: 'Popular wages' },
+	{ href: '/about', label: 'Methodology & disclaimer' },
+	{ href: '/privacy-policy', label: 'Privacy' },
+	{ href: '/terms', label: 'Terms' },
+	{ href: '/contact', label: 'Contact' },
+	{ href: '/#how-it-works', label: 'How it works' },
+	{ href: '/#faq', label: 'FAQ' },
+];
+
+const isActive = (href: string) =>
+	href === '/' ? pathname === '/' : pathname === href;
+---
+
+<footer class="site-footer">
+	<div class="shell footer-inner">
+		<div class="footer-brand">
+			<a class="brand" href="/" aria-label="Nethourly home">
+				<span class="mark" aria-hidden="true">N</span>
+				<span class="wordmark">Nethourly<span class="tld">.com</span></span>
+			</a>
+			<p>Pay clarity for US workers.</p>
+		</div>
+		<nav class="footer-nav" aria-label="Footer">
+			{links.map((link) => (
+				<a href={link.href} aria-current={isActive(link.href) ? 'page' : undefined}>
+					{link.label}
+				</a>
+			))}
+		</nav>
+	</div>
+	<div class="shell footer-bottom">
+		<p>© 2026 Nethourly.com · Estimates only, not payroll or tax advice.</p>
+		<p class="mono">FLSA · FICA · 52 weeks</p>
+	</div>
+</footer>
+
+<style>
+	.site-footer {
+		padding: 64px 0 32px;
+		border-top: 1px solid var(--hairline);
+	}
+
+	.footer-inner {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 32px;
+	}
+
+	.footer-brand p {
+		margin: 12px 0 0;
+		font-size: 14px;
+		color: var(--mute);
+	}
+
+	.footer-nav {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px 20px;
+		font-size: 14px;
+		color: var(--body);
+	}
+
+	.footer-nav a:hover {
+		color: var(--ink);
+		text-decoration: underline;
+		text-underline-offset: 4px;
+	}
+
+	.footer-nav a[aria-current='page'] {
+		color: var(--ink);
+		font-weight: 500;
+	}
+
+	.footer-bottom {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+		margin-top: 48px;
+		padding-top: 24px;
+		border-top: 1px solid var(--hairline-soft);
+	}
+
+	.footer-bottom p {
+		margin: 0;
+		font-size: 12px;
+		line-height: 18px;
+		color: var(--faint);
+	}
+
+	.footer-bottom .mono {
+		font-size: 11px;
+		white-space: nowrap;
+	}
+
+	@media (max-width: 720px) {
+		.footer-inner {
+			flex-direction: column;
+		}
+
+		.footer-bottom {
+			align-items: flex-start;
+			flex-direction: column;
+		}
+	}
+</style>

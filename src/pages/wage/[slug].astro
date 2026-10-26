@@ -1,0 +1,1177 @@
+---
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import Calculator from '../../components/Calculator.astro';
+import EditorialGuide from '../../components/EditorialGuide.astro';
+import FaqSection from '../../components/FaqSection.astro';
+import Layout from '../../layouts/Layout.astro';
+import {
+	STATE_MINIMUM_WAGES,
+	WAGE_TAX_TIERS,
+	WAGES,
+	formatRate,
+	formatUSD,
+	getNearbyWages,
+	getWageStats,
+	type WageEntry,
+} from '../../data/wages';
+
+export function getStaticPaths() {
+	return WAGES.map((wage, index) => ({
+		params: { slug: wage.slug },
+		props: { wage, index },
+	}));
+}
+
+interface Props {
+	wage: WageEntry;
+	index: number;
+}
+
+const { wage, index } = Astro.props;
+
+const stats = getWageStats(wage.rate);
+const standardTax = 0.18;
+const netAnnual = stats.annual * (1 - standardTax);
+const netBiWeekly = stats.biWeekly * (1 - standardTax);
+
+const prevWage = WAGES[index - 1];
+const nextWage = WAGES[index + 1];
+const nearby = getNearbyWages(wage.slug, 6);
+
+const money = (value: number) => formatUSD(value, 0);
+const rateMoney = (value: number) => formatRate(value);
+
+const netWeekly = stats.weekly * (1 - standardTax);
+const netMonthly = stats.monthly * (1 - standardTax);
+const fiveHoursOvertime = 5 * stats.overtimeRate;
+const weeklyWithFiveOvertime = stats.weekly + fiveHoursOvertime;
+const rentCap = stats.monthly * 0.3;
+const landlordRentCap = stats.monthly / 3;
+const needsBudget = netMonthly * 0.5;
+const wantsBudget = netMonthly * 0.3;
+const savingsBudget = netMonthly * 0.2;
+const nextMilestone = (Math.floor(stats.annual / 10000) + 1) * 10000;
+const gapToNext = nextMilestone - stats.annual;
+const overtimeHoursToNext = gapToNext / stats.overtimeRate;
+const weeksAtFiveOvertime = overtimeHoursToNext / 5;
+const fiveOvertimeAnnual = 5 * stats.overtimeRate * 52;
+const overtimeHoursText = Math.ceil(overtimeHoursToNext).toLocaleString('en-US');
+const overtimeWeeksText =
+	weeksAtFiveOvertime < 1
+		? weeksAtFiveOvertime.toFixed(1)
+		: Math.ceil(weeksAtFiveOvertime).toLocaleString('en-US');
+const nextMilestoneText = `At ${rateMoney(stats.overtimeRate)}/hr overtime, the next $10,000 milestone (${money(nextMilestone)} annual gross) is about ${overtimeHoursText} overtime hours, or ${overtimeWeeksText} weeks at five overtime hours a week.`;
+
+const wageTier = (() => {
+	if (wage.rate < 15) {
+		return {
+			label: 'Entry-level wage',
+			paragraphs: [
+				`At ${wage.display}/hr, you are working near or below many state and city minimums. Typical jobs include fast food, retail cashier, home health aide, janitorial, childcare, and seasonal warehouse work. The federal floor is $7.25, but your state or city may be higher.`,
+				`Assistance can matter more than a small raise. SNAP, Medicaid, the Earned Income Tax Credit, and the Child Tax Credit can change the value of extra hours. A $0.50 raise can reduce benefits before it raises cash. Run the numbers before you turn down overtime or accept a promotion.`,
+				`The next $10,000 is usually about more hours, a shift differential, or a short certificate, not a merit raise. ${nextMilestoneText} That is a lot of shifts. A certified nursing assistant, forklift, or food-handler credential may be faster.`,
+				`Watch the cliff. A raise that pushes you off Medicaid or a housing voucher can leave you with less cash. Ask your benefits office for the income limits before you accept a change.`,
+			],
+		};
+	}
+	if (wage.rate < 22.5) {
+		return {
+			label: 'Middle-wage hourly work',
+			paragraphs: [
+				`At ${wage.display}/hr, you are above the federal minimum but below the wage where most benefits phase out. Typical jobs include warehouse associate, medical assistant, dental assistant, customer service, security, school bus driver, and entry-level trades.`,
+				`The next $10,000 is often a certification, a CDL, a CNA-to-LPN bridge, or a move to a company with a night differential. ${nextMilestoneText}`,
+				`Look at the full package, not just the rate. Health insurance, a 401(k) match, paid time off, and predictable scheduling can be worth more than $1/hr. A $1/hr raise is $2,080 a year before taxes; five overtime hours a week at this rate is ${money(fiveOvertimeAnnual)} a year.`,
+				`Assistance and credits taper here. The EITC may still help if you have children, but the phase-out range matters. Check before you assume a raise is pure gain.`,
+			],
+		};
+	}
+	if (wage.rate < 36) {
+		return {
+			label: 'Skilled hourly work',
+			paragraphs: [
+				`At ${wage.display}/hr, you are in skilled hourly work: LPN, HVAC apprentice, CDL driver, bookkeeper, welder, respiratory tech, and entry-level public safety. You are earning enough that taxes, benefits, and job quality matter more than the minimum wage.`,
+				`The next $10,000 usually comes from a license, a specialty, or a shift differential, not from adding more hours. ${nextMilestoneText} At this level, a 401(k) match and an HSA can be worth more than a small raise.`,
+				`Watch lifestyle creep. A $2/hr raise is $4,160 a year before taxes, but a car payment can eat it. Keep housing at or below the 3x gross screen and save the difference.`,
+				`Tax credits are mostly phased out at this level, but the Saver's Credit and child-related credits may still apply. If you are a 1099 contractor, set aside quarterly estimated taxes and track mileage, tools, and licenses.`,
+			],
+		};
+	}
+	return {
+		label: 'Experienced hourly work',
+		paragraphs: [
+			`At ${wage.display}/hr, you are in experienced hourly work: RN, electrician, plumber, senior technician, software contractor, and travel nurse. You may be near the Social Security wage base, the 22% or 24% federal bracket, and state taxes that change the value of overtime.`,
+			`The next $10,000 is usually a specialty certification, a travel contract, or a business expense strategy if you are a 1099 contractor. ${nextMilestoneText} At this level, extra shifts are expensive in time and tax.`,
+			`If you are a W-2 worker, max the 401(k) and HSA before you chase extra shifts. If you are a 1099 contractor, set aside quarterly estimated taxes and track mileage, tools, and licenses. A higher rate does not fix a bad benefits package.`,
+			`Watch the wage base. Once you pass the Social Security cap, your FICA withholding drops, and a late-year overtime check can look bigger than expected. That is a wage-base rule, not an overtime tax cut.`,
+		],
+	};
+})();
+
+const aboveFederal = wage.rate - 7.25;
+const federalNote =
+	aboveFederal > 0 ? `${rateMoney(aboveFederal)} above` : 'equal to';
+const stateFloorNote =
+	wage.rate >= 20
+		? `It is also above the $15–$20 range that several states and cities have adopted as their minimum.`
+		: wage.rate >= 15
+			? `It is within the $15–$20 range that several states and cities have adopted as their minimum.`
+			: `It is below the $15–$20 range that several states and cities have adopted as their minimum.`;
+
+const periods = [
+	{ label: 'Daily', note: '8-hour day', value: stats.daily },
+	{ label: 'Weekly', note: '40 hours', value: stats.weekly },
+	{ label: 'Bi-weekly', note: '26 paychecks', value: stats.biWeekly },
+	{ label: 'Semi-monthly', note: '24 paychecks', value: stats.semiMonthly },
+	{ label: 'Monthly', note: '12 paychecks', value: stats.monthly },
+	{ label: 'Annual', note: '52 weeks', value: stats.annual },
+];
+
+const overtimeRows = [5, 10, 15].map((hours) => {
+	const overtimePay = hours * stats.overtimeRate;
+	const weekly = stats.weekly + overtimePay;
+	return {
+		hours,
+		overtimePay,
+		weekly,
+		annual: weekly * 52,
+	};
+});
+
+const scheduleRows = [
+	{ hours: 20, label: 'Part-time' },
+	{ hours: 30, label: 'Part-time plus' },
+	{ hours: 36, label: '3×12 nurse shift' },
+	{ hours: 40, label: 'Full-time' },
+	{ hours: 50, label: 'Overtime-heavy' },
+].map((row) => {
+	const weekly = wage.rate * row.hours;
+	return {
+		...row,
+		weekly,
+		monthly: (weekly * 52) / 12,
+		annual: weekly * 52,
+	};
+});
+
+const title = `${wage.display} an Hour is How Much a Year? (Gross & Net After Taxes)`;
+const description = `At ${wage.display} an hour, full-time pay is ${money(stats.annual)} a year or ${money(stats.biWeekly)} bi-weekly. See gross and after-tax pay by day, week, month, overtime, and 24-hour shift rates.`;
+
+const breadcrumbs = [
+	{ label: 'Home', href: '/' },
+	{ label: 'Popular Wages', href: '/popular-wages' },
+	{ label: `${wage.display}/hr Yearly & Bi-Weekly Pay` },
+];
+
+const faqs = [
+	{
+		question: `How much is ${wage.display} an hour per year in the US?`,
+		answer: `At ${wage.display} an hour, working 40 hours a week for 52 weeks, annual gross pay is ${money(stats.annual)} before taxes. After an estimated 18% for standard federal income tax and FICA, take-home pay is about ${money(netAnnual)} per year. This assumes full-time hours, no unpaid time off, and no state income tax.`,
+	},
+	{
+		question: `How much is a bi-weekly paycheck at ${wage.display} an hour?`,
+		answer: `A bi-weekly pay period covers 80 hours at ${wage.display}/hr, so gross pay is ${money(stats.biWeekly)} per paycheck. Across 26 annual paychecks, estimated take-home pay is about ${money(netBiWeekly)} per paycheck after 18% federal and FICA taxes. A semi-monthly schedule instead produces 24 larger paychecks of ${money(stats.semiMonthly)} gross.`,
+	},
+	{
+		question: `What is time and a half (1.5x overtime) for ${wage.display} an hour?`,
+		answer: `Time and a half at ${wage.display} an hour is ${rateMoney(stats.overtimeRate)} per hour (${wage.display} × 1.5). Double time is ${rateMoney(stats.doubleTimeRate)} per hour (${wage.display} × 2). Five overtime hours in a week add ${money(fiveHoursOvertime)} in gross overtime pay, raising weekly gross from ${money(stats.weekly)} to ${money(weeklyWithFiveOvertime)}.`,
+	},
+	{
+		question: `How much is ${wage.display} an hour per month and per week?`,
+		answer: `At 40 hours a week, ${wage.display} an hour pays ${money(stats.weekly)} gross per week and ${money(stats.monthly)} gross per month. After an estimated 18% tax rate, take-home pay is about ${money(netWeekly)} net per week and ${money(netMonthly)} net per month.`,
+	},
+	{
+		question: `Is ${wage.display} an hour a livable wage in the United States?`,
+		answer: `${wage.display} an hour is ${money(stats.annual)} a year at full-time hours, which is ${federalNote} the $7.25 federal minimum wage. ${stateFloorNote} Using the 30% rent affordability rule, monthly rent should stay at or below ${money(rentCap)}. Whether the wage is livable depends on location, household size, benefits, and local housing costs.`,
+	},
+];
+---
+
+<Layout title={title} description={description}>
+	<Breadcrumbs items={breadcrumbs} />
+	<section class="page-hero">
+		<div class="mesh" aria-hidden="true"></div>
+		<div class="shell hero-inner">
+			<p class="eyebrow mono">Hourly wage · 40 hrs/week · 52 weeks</p>
+			<h1>
+				{wage.display} an Hour is How Much a Year?{' '}
+				<span class="h1-sub">(Gross &amp; Net After Taxes)</span>
+			</h1>
+			<p class="lede">
+				A full-time schedule at {wage.display} an hour pays {money(stats.annual)} a year
+				before taxes. Below is the complete breakdown by pay period, tax tier, overtime
+				premium, and weekly hours.
+			</p>
+			{wage.note && <p class="wage-note mono">{wage.note}</p>}
+
+			<div class="answer-card">
+				<span class="mono">Instant answer</span>
+				<p>
+					Working full-time (40 hours/week for 52 weeks) at <strong>{wage.display} an hour</strong>{' '}
+					equals <strong>{money(stats.annual)} per year</strong> before taxes, or{' '}
+					<strong>{money(stats.biWeekly)} bi-weekly</strong>. After standard US federal &amp;
+					FICA taxes (~18%), your estimated take-home pay is{' '}
+					<strong>{money(netAnnual)}/year</strong> (
+					<strong>{money(netBiWeekly)} per bi-weekly paycheck</strong>).
+				</p>
+			</div>
+
+			<ul class="quick-stats" aria-label="Key pay figures">
+				<li>
+					<span>Annual gross</span>
+					<strong>{money(stats.annual)}</strong>
+				</li>
+				<li>
+					<span>Bi-weekly gross</span>
+					<strong>{money(stats.biWeekly)}</strong>
+				</li>
+				<li>
+					<span>Annual take-home</span>
+					<strong>{money(netAnnual)}</strong>
+				</li>
+				<li>
+					<span>Bi-weekly take-home</span>
+					<strong>{money(netBiWeekly)}</strong>
+				</li>
+			</ul>
+		</div>
+	</section>
+
+	<section class="calculator-section" aria-label={`${wage.display} hourly pay calculator`}>
+		<div class="shell">
+			<div class="section-head compact">
+				<p class="eyebrow mono">Pre-filled calculator</p>
+				<h2>Adjust your hours, overtime, and taxes.</h2>
+				<p>
+					The calculator starts at {wage.display}/hr. Change hours per week, weeks worked,
+					double-time hours, or the tax scenario and every figure updates instantly.
+				</p>
+			</div>
+			<Calculator hourlyRate={wage.rate} />
+		</div>
+	</section>
+
+	<section class="content-section" id="take-home">
+		<div class="shell">
+			<div class="section-head">
+				<p class="eyebrow mono">Tax tiers</p>
+				<h2>{wage.display} an hour by pay period and tax tier.</h2>
+				<p>
+					Gross pay assumes 40 hours a week for 52 weeks. Net columns apply an estimated
+					flat rate to every period, so they are planning figures — not a tax return.
+				</p>
+			</div>
+
+			<div class="table-card">
+				<div class="table-scroll">
+					<table>
+						<caption class="sr-only">
+							Gross and estimated take-home pay at {wage.display} an hour across tax tiers
+						</caption>
+						<thead>
+							<tr>
+								<th scope="col">Pay period</th>
+								{WAGE_TAX_TIERS.map((tier) => (
+									<th scope="col" class="num">
+										<span class="th-label">{tier.label}</span>
+										<span class="th-note">{tier.note}</span>
+									</th>
+								))}
+							</tr>
+						</thead>
+						<tbody>
+							{periods.map((period) => (
+								<tr>
+									<th scope="row">
+										<span class="row-label">{period.label}</span>
+										<span class="row-note">{period.note}</span>
+									</th>
+									{WAGE_TAX_TIERS.map((tier) => (
+										<td class="num">{money(period.value * (1 - tier.rate))}</td>
+									))}
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			<p class="table-footnote">
+				Standard single filer estimate combines FICA (7.65%) with roughly 10.35% effective
+				federal tax. No-income-tax states still pay FICA and federal tax. High-tax states add
+				state income tax. Actual withholding depends on filing status, deductions, and
+				location.
+			</p>
+		</div>
+	</section>
+
+	<section class="content-section" id="overtime">
+		<div class="shell">
+			<div class="section-head">
+				<p class="eyebrow mono">Overtime &amp; shifts</p>
+				<h2>Overtime at {wage.display} an hour.</h2>
+				<p>
+					FLSA overtime applies to hours over 40 in a workweek. Double time is common for
+					holidays and California hours beyond 12 in a day.
+				</p>
+			</div>
+
+			<div class="rate-cards">
+				<article class="rate-card">
+					<span class="mono">Time and a half · 1.5×</span>
+					<strong>{rateMoney(stats.overtimeRate)}<span>/hr</span></strong>
+					<p>Each overtime hour adds {rateMoney(stats.overtimeRate - wage.rate)} over the base rate.</p>
+				</article>
+				<article class="rate-card">
+					<span class="mono">Double time · 2×</span>
+					<strong>{rateMoney(stats.doubleTimeRate)}<span>/hr</span></strong>
+					<p>Holiday shifts and long California days can reach the double-time rate.</p>
+				</article>
+			</div>
+
+			<div class="table-card">
+				<div class="table-head">
+					<div>
+						<span class="mono">Weekly overtime</span>
+						<h3>Boosted pay with 5, 10, or 15 overtime hours</h3>
+					</div>
+					<p class="hint">
+						Base schedule: 40 regular hours per week at {wage.display}/hr, plus overtime
+						at {rateMoney(stats.overtimeRate)}/hr.
+					</p>
+				</div>
+				<div class="table-scroll">
+					<table>
+						<caption class="sr-only">Weekly and annual pay with overtime</caption>
+						<thead>
+							<tr>
+								<th scope="col">Overtime hours</th>
+								<th scope="col" class="num">Overtime pay</th>
+								<th scope="col" class="num">Weekly total</th>
+								<th scope="col" class="num">Annual total</th>
+							</tr>
+						</thead>
+						<tbody>
+							{overtimeRows.map((row) => (
+								<tr>
+									<th scope="row">{row.hours} hrs/week</th>
+									<td class="num">{money(row.overtimePay)}</td>
+									<td class="num">{money(row.weekly)}</td>
+									<td class="num">{money(row.annual)}</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			<div class="cta-row">
+				<a class="button button-primary" href="/overtime-calculator">
+					Open the overtime calculator
+				</a>
+				<a class="button button-secondary" href="/24-hour-shift-calculator">
+					24-hour shift calculator
+				</a>
+			</div>
+		</div>
+	</section>
+
+	<section class="content-section" id="hours">
+		<div class="shell">
+			<div class="section-head">
+				<p class="eyebrow mono">Hours</p>
+				<h2>Part-time vs. full-time at {wage.display} an hour.</h2>
+				<p>
+					Weekly pay scales linearly with hours. Monthly and annual figures assume the same
+					schedule every week for 52 weeks.
+				</p>
+			</div>
+
+			<div class="table-card">
+				<div class="table-scroll">
+					<table>
+						<caption class="sr-only">
+							Weekly, monthly, and annual pay by weekly hours at {wage.display} an hour
+						</caption>
+						<thead>
+							<tr>
+								<th scope="col">Schedule</th>
+								<th scope="col" class="num">Hours/week</th>
+								<th scope="col" class="num">Weekly</th>
+								<th scope="col" class="num">Monthly</th>
+								<th scope="col" class="num">Annual</th>
+							</tr>
+						</thead>
+						<tbody>
+							{scheduleRows.map((row) => (
+								<tr>
+									<th scope="row">{row.label}</th>
+									<td class="num">{row.hours}</td>
+									<td class="num">{money(row.weekly)}</td>
+									<td class="num">{money(row.monthly)}</td>
+									<td class="num">{money(row.annual)}</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			<p class="table-footnote">
+				At {wage.display}/hr, 40 hours a week is {money(stats.weekly)} weekly and{' '}
+				{money(stats.annual)} annually. Working 20 hours a week cuts those figures in half;
+				50 hours a week adds 10 hours at the regular rate unless overtime applies.
+			</p>
+		</div>
+	</section>
+
+	<section class="content-section" id="state-minimums">
+		<div class="shell">
+			<div class="section-head">
+				<p class="eyebrow mono">Comparison</p>
+				<h2>How {wage.display} compares to state minimums.</h2>
+				<p>
+					{wage.rate > 7.25
+						? `${wage.display} an hour is ${rateMoney(wage.rate - 7.25)} above the federal minimum wage of $7.25.`
+						: `${wage.display} an hour matches the federal minimum wage of $7.25.`}{' '}
+					Several states set a higher floor, and some cities go higher still.
+				</p>
+			</div>
+
+			<div class="table-card">
+				<div class="table-scroll">
+					<table>
+						<caption class="sr-only">State minimum wage comparison</caption>
+						<thead>
+							<tr>
+								<th scope="col">State</th>
+								<th scope="col" class="num">Minimum wage</th>
+								<th scope="col" class="num">Annual at 40 hrs</th>
+								<th scope="col" class="num">vs. {wage.display}</th>
+							</tr>
+						</thead>
+						<tbody>
+							{STATE_MINIMUM_WAGES.map((item) => {
+								const difference = wage.rate - item.rate;
+								return (
+									<tr>
+										<th scope="row">{item.state}</th>
+										<td class="num">{rateMoney(item.rate)}</td>
+										<td class="num">{money(item.rate * 2080)}</td>
+										<td class="num">
+											{difference === 0
+												? 'Parity'
+												: `${difference > 0 ? '+' : '−'}${rateMoney(Math.abs(difference))}`}
+										</td>
+									</tr>
+								);
+							})}
+						</tbody>
+					</table>
+				</div>
+			</div>
+			<p class="table-footnote">
+				Reference minimum wages only. State and local rates change annually — confirm the
+				current figure with your state labor office. Annual values assume 2,080 hours.{' '}
+				<a href="/popular-wages#state-minimums">See the full state minimum wage table</a>.
+			</p>
+		</div>
+	</section>
+
+	<EditorialGuide
+		id="wage-guide"
+		eyebrow={`${wage.display}/hr field guide`}
+		title={`What ${wage.display} an hour actually buys.`}
+		lede={`At ${wage.display}/hr, gross monthly pay is ${money(stats.monthly)}. After an 18% estimate for federal income tax and FICA, take-home is about ${money(netMonthly)}. That is the number to budget with.`}
+		toc={[
+			{ id: 'monthly-budget', label: 'The monthly budget' },
+			{ id: 'rent-screen', label: 'Rent and the 3x rule' },
+			{ id: 'wage-tier', label: wageTier.label },
+			{ id: 'next-10k', label: 'The next $10,000' },
+		]}
+		asideNote="The 18% estimate is a planning number, not a tax return. Replace it with your stub when you have one."
+	>
+		<h3 id="monthly-budget">Start with net monthly pay, not gross</h3>
+		<p>
+			Gross pay is for loan applications and landlord screens. Net pay is for groceries. At{' '}
+			{wage.display} an hour, full-time gross monthly pay is {money(stats.monthly)}. After
+			the 18% estimate, take-home is about {money(netMonthly)}. A 50/30/20 split puts{' '}
+			{money(needsBudget)} toward needs, {money(wantsBudget)} toward wants, and{' '}
+			{money(savingsBudget)} toward savings and debt.
+		</p>
+		<p>
+			That split is a starting point, not a law. High-cost cities may push needs to 60%;
+			low-cost areas may allow 25% savings. Ask which line is out of line.
+		</p>
+		<p>
+			A monthly budget is not the same as a monthly paycheck. If you are paid bi-weekly, you
+			get 26 checks, not 24. Two months have three checks. Budget on the monthly average, not
+			the two-check month.
+		</p>
+
+		<div class="editorial-stat-grid">
+			<div class="editorial-stat">
+				<span class="mono">Take-home</span>
+				<strong>{money(netMonthly)}</strong>
+				<span>estimated monthly</span>
+			</div>
+			<div class="editorial-stat">
+				<span class="mono">Needs · 50%</span>
+				<strong>{money(needsBudget)}</strong>
+				<span>rent, food, utilities</span>
+			</div>
+			<div class="editorial-stat">
+				<span class="mono">Wants · 30%</span>
+				<strong>{money(wantsBudget)}</strong>
+				<span>discretionary</span>
+			</div>
+			<div class="editorial-stat">
+				<span class="mono">Savings · 20%</span>
+				<strong>{money(savingsBudget)}</strong>
+				<span>buffer and debt</span>
+			</div>
+		</div>
+
+		<h3 id="rent-screen">Rent is the line that breaks the budget</h3>
+		<p>
+			A landlord using the 3x rule may approve up to {money(landlordRentCap)} a month
+			because your gross monthly pay is {money(stats.monthly)}. The 30% target is{' '}
+			{money(rentCap)}, which leaves more room for utilities, food, and savings. The
+			landlord's ceiling is not your budget. It is the maximum someone will rent to you, not
+			the amount you should pay.
+		</p>
+		<p>
+			If rent is above {money(rentCap)}, the 50/30/20 plan is under pressure. You need a
+			roommate, a cheaper unit, or more income. Cutting wants will not fix housing that eats
+			half your take-home.
+		</p>
+		<p>
+			Utilities are not included in rent. Ask for the average bill; a $1,200 rent with a $250
+			winter utility bill is a $1,450 housing cost. Parking, insurance, and laundry can add
+			$100 to $200.
+		</p>
+
+		<div class="editorial-callout">
+			<span class="mono">The 3x screen vs. the 30% target</span>
+			<p>
+				At {wage.display}/hr, the 3x screen allows {money(landlordRentCap)}/month, while the
+				30% target is {money(rentCap)}. The difference is {money(landlordRentCap - rentCap)}{' '}
+				a month, or {money((landlordRentCap - rentCap) * 12)} a year. That is your margin
+				for utilities, repairs, and savings.
+			</p>
+		</div>
+
+		<h3 id="wage-tier">{wageTier.label}</h3>
+		{wageTier.paragraphs.map((paragraph) => <p>{paragraph}</p>)}
+
+		<h3 id="next-10k">The next $10,000</h3>
+		<p>
+			At {wage.display}/hr, annual gross is {money(stats.annual)}. The next $10,000
+			milestone is {money(nextMilestone)}. The gap is {money(gapToNext)}. Five overtime hours
+			a week adds {money(fiveOvertimeAnnual)} a year at this rate.
+		</p>
+		<p>
+			Overtime is the fastest lever if your employer offers it. If not, the lever is a raise,
+			a certification, or a new job.
+		</p>
+		<p class="editorial-footnote">
+			The 18% estimate does not include state income tax, local tax, pre-tax deductions, or
+			credits. A Texas worker with no state income tax may keep more; a California or New
+			York worker may keep less. Use the net figure as a starting point, then replace it
+			with your actual stub.
+		</p>
+	</EditorialGuide>
+
+	<FaqSection
+		items={faqs}
+		eyebrow="People also ask"
+		title={`${wage.display} an hour FAQ`}
+		description={`Pay periods, overtime, and livability answers calculated for ${wage.display} an hour.`}
+		id="faq"
+	/>
+
+	<section class="content-section" id="nearby-wages">
+		<div class="shell">
+			<div class="section-head">
+				<p class="eyebrow mono">Nearby wages</p>
+				<h2>Compare wages around {wage.display} an hour.</h2>
+				<p>
+					Small rate changes compound across a full year. Jump to a nearby hourly rate to
+					see its annual, bi-weekly, and overtime pay.
+				</p>
+			</div>
+
+			<div class="nearby-grid">
+				{nearby.map((item) => {
+					const itemStats = getWageStats(item.rate);
+					return (
+						<a class="nearby-card" href={`/wage/${item.slug}`}>
+							<span class="nearby-rate">{item.display}<span>/hr</span></span>
+							<span class="nearby-annual">{money(itemStats.annual)} / year</span>
+							<span class="nearby-ot">1.5× · {rateMoney(itemStats.overtimeRate)}/hr</span>
+						</a>
+					);
+				})}
+			</div>
+
+			<nav class="pager" aria-label="Previous and next wage">
+				{prevWage ? (
+					<a class="pager-link pager-prev" href={`/wage/${prevWage.slug}`}>
+						<span class="mono">Previous</span>
+						<strong>← {prevWage.display} an hour</strong>
+					</a>
+				) : (
+					<span></span>
+				)}
+				{nextWage ? (
+					<a class="pager-link pager-next" href={`/wage/${nextWage.slug}`}>
+						<span class="mono">Next</span>
+						<strong>{nextWage.display} an hour →</strong>
+					</a>
+				) : (
+					<span></span>
+				)}
+			</nav>
+
+			<div class="hub-cta">
+				<p>Browse every hourly rate from $7.25 to $100 in one place.</p>
+				<a class="button button-secondary" href="/popular-wages">All wage guides</a>
+			</div>
+		</div>
+	</section>
+</Layout>
+
+<style>
+	.page-hero {
+		position: relative;
+		overflow: hidden;
+		padding: 56px 0 48px;
+		text-align: center;
+	}
+
+	.mesh {
+		position: absolute;
+		inset: -280px -10% auto;
+		height: 620px;
+		background:
+			radial-gradient(38% 55% at 18% 42%, rgba(0, 124, 240, 0.26), transparent 70%),
+			radial-gradient(32% 50% at 44% 20%, rgba(121, 40, 202, 0.2), transparent 72%),
+			radial-gradient(38% 55% at 70% 44%, rgba(255, 0, 128, 0.14), transparent 72%),
+			radial-gradient(30% 48% at 88% 22%, rgba(249, 203, 40, 0.2), transparent 72%);
+		filter: blur(36px);
+		pointer-events: none;
+		-webkit-mask-image: linear-gradient(to bottom, #000 40%, transparent 100%);
+		mask-image: linear-gradient(to bottom, #000 40%, transparent 100%);
+	}
+
+	.hero-inner {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.hero-inner h1 {
+		max-width: 940px;
+		margin: 20px 0 0;
+		font-size: clamp(34px, 5.8vw, 58px);
+		font-weight: 600;
+		line-height: 1.03;
+		letter-spacing: -2.4px;
+		text-wrap: balance;
+	}
+
+	.h1-sub {
+		display: block;
+		margin-top: 8px;
+		font-size: 0.48em;
+		font-weight: 500;
+		line-height: 1.2;
+		letter-spacing: -0.6px;
+		color: var(--mute);
+	}
+
+	.lede {
+		max-width: 680px;
+		margin: 18px 0 0;
+		font-size: 17px;
+		line-height: 27px;
+		color: var(--body);
+	}
+
+	.wage-note {
+		margin: 16px 0 0;
+		padding: 5px 11px;
+		border: 1px solid var(--hairline);
+		border-radius: 100px;
+		background: rgba(255, 255, 255, 0.7);
+		color: var(--body);
+		font-size: 11px;
+		letter-spacing: 0.02em;
+	}
+
+	.answer-card {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		width: 100%;
+		max-width: 820px;
+		margin: 28px 0 0;
+		padding: 22px 24px;
+		border: 1px solid var(--hairline);
+		border-radius: 16px;
+		background: rgba(255, 255, 255, 0.92);
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+		text-align: left;
+	}
+
+	.answer-card .mono {
+		color: var(--mute);
+	}
+
+	.answer-card p {
+		margin: 0;
+		font-size: 16px;
+		line-height: 27px;
+		color: var(--body);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.answer-card strong {
+		font-weight: 600;
+		color: var(--ink);
+	}
+
+	.quick-stats {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 8px;
+		width: 100%;
+		max-width: 820px;
+		margin: 16px 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.quick-stats li {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		padding: 14px 16px;
+		border: 1px solid var(--hairline);
+		border-radius: 12px;
+		background: rgba(255, 255, 255, 0.8);
+		text-align: left;
+	}
+
+	.quick-stats span {
+		font-size: 12px;
+		line-height: 16px;
+		color: var(--mute);
+	}
+
+	.quick-stats strong {
+		font-size: 17px;
+		font-weight: 600;
+		letter-spacing: -0.3px;
+		color: var(--ink);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.calculator-section {
+		padding: 24px 0 88px;
+		border-top: 1px solid var(--hairline);
+	}
+
+	.section-head {
+		max-width: 720px;
+		margin-bottom: 28px;
+	}
+
+	.section-head.compact {
+		margin-bottom: 20px;
+	}
+
+	.section-head .eyebrow {
+		color: var(--mute);
+	}
+
+	.section-head h2 {
+		margin: 12px 0 0;
+		font-size: clamp(26px, 3.6vw, 36px);
+		font-weight: 600;
+		line-height: 1.12;
+		letter-spacing: -1.4px;
+	}
+
+	.section-head p:last-child {
+		margin: 10px 0 0;
+		font-size: 15px;
+		line-height: 25px;
+		color: var(--body);
+	}
+
+	.content-section {
+		padding: 80px 0;
+		border-top: 1px solid var(--hairline);
+	}
+
+	.table-card {
+		border: 1px solid var(--hairline);
+		border-radius: 14px;
+		background: var(--canvas-elevated);
+		overflow: hidden;
+	}
+
+	.table-head {
+		display: flex;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 24px;
+		padding: 20px 20px 0;
+	}
+
+	.table-head h3 {
+		margin: 6px 0 0;
+		font-size: 18px;
+		font-weight: 600;
+		letter-spacing: -0.35px;
+	}
+
+	.table-head .hint {
+		max-width: 340px;
+		margin: 0;
+		text-align: right;
+	}
+
+	.hint {
+		font-size: 12px;
+		line-height: 17px;
+		color: var(--mute);
+	}
+
+	.table-scroll {
+		overflow-x: auto;
+	}
+
+	table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 14px;
+		font-variant-numeric: tabular-nums;
+	}
+
+	thead th {
+		padding: 12px 16px;
+		border-bottom: 1px solid var(--hairline);
+		text-align: left;
+		font-size: 11px;
+		font-weight: 500;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--mute);
+		white-space: nowrap;
+		vertical-align: bottom;
+	}
+
+	thead th .th-label {
+		display: block;
+	}
+
+	thead th .th-note {
+		display: block;
+		margin-top: 3px;
+		font-size: 10px;
+		font-weight: 400;
+		letter-spacing: 0;
+		text-transform: none;
+		color: var(--faint);
+	}
+
+	tbody th,
+	tbody td {
+		padding: 13px 16px;
+		border-bottom: 1px solid var(--hairline-soft);
+		color: var(--ink);
+		white-space: nowrap;
+	}
+
+	tbody th {
+		text-align: left;
+		font-weight: 500;
+	}
+
+	tbody tr:last-child th,
+	tbody tr:last-child td {
+		border-bottom: 0;
+	}
+
+	tbody tr:hover th,
+	tbody tr:hover td {
+		background: var(--canvas);
+	}
+
+	.row-label {
+		display: block;
+	}
+
+	.row-note {
+		display: block;
+		margin-top: 2px;
+		font-size: 11px;
+		font-weight: 400;
+		color: var(--faint);
+	}
+
+	.num {
+		text-align: right;
+	}
+
+	.table-footnote {
+		max-width: 900px;
+		margin: 14px 0 0;
+		font-size: 12px;
+		line-height: 18px;
+		color: var(--faint);
+	}
+
+	.table-footnote a {
+		color: var(--ink);
+		text-decoration: underline;
+		text-underline-offset: 3px;
+	}
+
+	.rate-cards {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 12px;
+		margin-bottom: 12px;
+	}
+
+	.rate-card {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		padding: 22px;
+		border: 1px solid var(--hairline);
+		border-radius: 14px;
+		background: var(--canvas-elevated);
+	}
+
+	.rate-card .mono {
+		color: var(--mute);
+	}
+
+	.rate-card strong {
+		font-size: clamp(30px, 4vw, 40px);
+		font-weight: 600;
+		line-height: 1;
+		letter-spacing: -1.6px;
+		color: var(--ink);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.rate-card strong span {
+		margin-left: 4px;
+		font-size: 16px;
+		font-weight: 500;
+		letter-spacing: 0;
+		color: var(--mute);
+	}
+
+	.rate-card p {
+		margin: 0;
+		font-size: 13px;
+		line-height: 20px;
+		color: var(--body);
+	}
+
+	.cta-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		margin-top: 20px;
+	}
+
+	.nearby-grid {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 10px;
+	}
+
+	.nearby-card {
+		display: flex;
+		flex-direction: column;
+		gap: 5px;
+		padding: 18px;
+		border: 1px solid var(--hairline);
+		border-radius: 12px;
+		background: var(--canvas-elevated);
+		transition:
+			border-color 0.15s ease,
+			transform 0.15s ease;
+	}
+
+	.nearby-card:hover {
+		border-color: #d4d4d4;
+		transform: translateY(-1px);
+	}
+
+	.nearby-rate {
+		font-size: 22px;
+		font-weight: 600;
+		letter-spacing: -0.7px;
+		color: var(--ink);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.nearby-rate span {
+		margin-left: 2px;
+		font-size: 13px;
+		font-weight: 500;
+		letter-spacing: 0;
+		color: var(--mute);
+	}
+
+	.nearby-annual {
+		font-size: 13px;
+		color: var(--body);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.nearby-ot {
+		font-size: 11px;
+		color: var(--faint);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.pager {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 10px;
+		margin-top: 12px;
+	}
+
+	.pager-link {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		padding: 16px 18px;
+		border: 1px solid var(--hairline);
+		border-radius: 12px;
+		background: var(--canvas-elevated);
+		transition: border-color 0.15s ease;
+	}
+
+	.pager-link:hover {
+		border-color: #d4d4d4;
+	}
+
+	.pager-link .mono {
+		color: var(--mute);
+	}
+
+	.pager-link strong {
+		font-size: 15px;
+		font-weight: 500;
+		color: var(--ink);
+	}
+
+	.pager-next {
+		text-align: right;
+	}
+
+	.hub-cta {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		margin-top: 20px;
+		padding: 18px 20px;
+		border: 1px solid var(--hairline);
+		border-radius: 14px;
+		background: var(--canvas-elevated);
+	}
+
+	.hub-cta p {
+		margin: 0;
+		font-size: 14px;
+		color: var(--body);
+	}
+
+	@media (max-width: 900px) {
+		.quick-stats {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.nearby-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.table-head {
+			align-items: flex-start;
+			flex-direction: column;
+			gap: 6px;
+		}
+
+		.table-head .hint {
+			text-align: left;
+		}
+	}
+
+	@media (max-width: 640px) {
+		.page-hero {
+			padding: 44px 0 36px;
+		}
+
+		.hero-inner h1 {
+			letter-spacing: -1.6px;
+		}
+
+		.h1-sub {
+			letter-spacing: -0.3px;
+		}
+
+		.lede {
+			font-size: 15px;
+			line-height: 24px;
+		}
+
+		.answer-card {
+			padding: 18px;
+		}
+
+		.answer-card p {
+			font-size: 14px;
+			line-height: 24px;
+		}
+
+		.calculator-section {
+			padding-bottom: 64px;
+		}
+
+		.content-section {
+			padding: 60px 0;
+		}
+
+		.rate-cards,
+		.nearby-grid,
+		.pager {
+			grid-template-columns: 1fr;
+		}
+
+		.pager-next {
+			text-align: left;
+		}
+
+		.hub-cta {
+			align-items: flex-start;
+			flex-direction: column;
+		}
+
+		.hub-cta .button {
+			width: 100%;
+		}
+	}
+</style>

@@ -1,0 +1,999 @@
+---
+import {
+	calculateStandard,
+	getFrequencyRows,
+	TAX_SCENARIOS,
+} from '../lib/payroll';
+
+interface Props {
+	hourlyRate?: number;
+}
+
+const { hourlyRate = 25 } = Astro.props;
+
+const initialInput = {
+	hourlyRate,
+	hoursPerWeek: 40,
+	doubleTimeHours: 0,
+	weeksPerYear: 52,
+};
+
+const initial = calculateStandard(initialInput);
+const initialTax = TAX_SCENARIOS.standard;
+const initialTaxAmount = initial.weeklyGross * initialTax.rate;
+const initialNetWeekly = initial.weeklyGross - initialTaxAmount;
+const initialRows = getFrequencyRows(initial, initialInput.hourlyRate, initialInput.weeksPerYear);
+
+const money = (value: number) =>
+	value.toLocaleString('en-US', {
+		style: 'currency',
+		currency: 'USD',
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+	});
+
+const hours = (value: number) =>
+	value.toLocaleString('en-US', { maximumFractionDigits: 1 });
+---
+
+<section id="calculator" class="calculator" aria-labelledby="calculator-title">
+	<div class="calc-grid">
+		<form id="pay-form" class="panel form-panel" novalidate>
+			<div class="panel-head">
+				<span class="mono">01 — Input</span>
+				<h2 id="calculator-title">Your pay details</h2>
+			</div>
+
+			<label class="field">
+				<span class="field-label">Hourly rate</span>
+				<span class="control control-prefix">
+					<span class="affix" aria-hidden="true">$</span>
+					<input
+						id="hourly-rate"
+						name="hourly-rate"
+						type="number"
+						inputmode="decimal"
+						min="0"
+						max="10000"
+						step="0.01"
+						value={initialInput.hourlyRate}
+					/>
+				</span>
+				<span class="hint">Base rate before overtime premiums or deductions.</span>
+			</label>
+
+			<fieldset class="field mode-field">
+				<legend class="field-label">Shift type</legend>
+				<div class="segmented">
+					<label>
+						<input type="radio" name="shift-mode" value="standard" checked />
+						<span>Standard week</span>
+					</label>
+					<label>
+						<input type="radio" name="shift-mode" value="shift" />
+						<span>24-hour shift</span>
+					</label>
+				</div>
+			</fieldset>
+
+			<div class="field-stack" data-panel="standard">
+				<div class="field-row">
+					<label class="field">
+						<span class="field-label">Hours per week</span>
+						<span class="control control-suffix">
+							<input
+								id="hours-week"
+								name="hours-week"
+								type="number"
+								inputmode="decimal"
+								min="0"
+								max="168"
+								step="0.5"
+								value={initialInput.hoursPerWeek}
+							/>
+							<span class="affix" aria-hidden="true">hrs</span>
+						</span>
+					</label>
+					<label class="field">
+						<span class="field-label">Double-time hours</span>
+						<span class="control control-suffix">
+							<input
+								id="double-time"
+								name="double-time"
+								type="number"
+								inputmode="decimal"
+								min="0"
+								max="168"
+								step="0.5"
+								value={initialInput.doubleTimeHours}
+							/>
+							<span class="affix" aria-hidden="true">hrs</span>
+						</span>
+					</label>
+				</div>
+				<p class="hint">Double-time hours sit inside the weekly total — holidays or California shifts past 12 hours.</p>
+			</div>
+
+			<div class="field-stack" data-panel="shift" hidden>
+				<div class="field-row">
+					<label class="field">
+						<span class="field-label">Shifts per week</span>
+						<span class="control control-suffix">
+							<input
+								id="shifts-week"
+								name="shifts-week"
+								type="number"
+								inputmode="numeric"
+								min="0"
+								max="7"
+								step="1"
+								value="5"
+							/>
+							<span class="affix" aria-hidden="true">shifts</span>
+						</span>
+					</label>
+					<label class="field">
+						<span class="field-label">Sleep deduction</span>
+						<span class="control control-suffix">
+							<input
+								id="sleep-deduction"
+								name="sleep-deduction"
+								type="number"
+								inputmode="numeric"
+								min="0"
+								max="8"
+								step="1"
+								value="8"
+							/>
+							<span class="affix" aria-hidden="true">hrs</span>
+						</span>
+					</label>
+				</div>
+				<div class="field-row">
+					<label class="field">
+						<span class="field-label">Meal deduction</span>
+						<span class="control control-suffix">
+							<input
+								id="meal-deduction"
+								name="meal-deduction"
+								type="number"
+								inputmode="numeric"
+								min="0"
+								max="3"
+								step="1"
+								value="3"
+							/>
+							<span class="affix" aria-hidden="true">hrs</span>
+						</span>
+					</label>
+					<div class="field">
+						<span class="field-label">Payable per shift</span>
+						<span class="readout" id="payable-per-shift">13 hrs</span>
+					</div>
+				</div>
+				<label class="switch-row">
+					<input id="daily-overtime" name="daily-overtime" type="checkbox" />
+					<span class="switch" aria-hidden="true"></span>
+					<span class="switch-copy">
+						<strong>CA-style daily overtime</strong>
+						<small>First 8 payable hours at 1×, hours 8–12 at 1.5×, beyond 12 at 2×.</small>
+					</span>
+				</label>
+				<p class="hint">Sleep time is excludable up to 8 hours only with 5+ hours of uninterrupted sleep. Meals are excludable up to 3 duty-free hours.</p>
+			</div>
+
+			<label class="field field-weeks">
+				<span class="field-label">Weeks worked per year</span>
+				<span class="control control-suffix">
+					<input
+						id="weeks-year"
+						name="weeks-year"
+						type="number"
+						inputmode="numeric"
+						min="1"
+						max="52"
+						step="1"
+						value={initialInput.weeksPerYear}
+					/>
+					<span class="affix" aria-hidden="true">weeks</span>
+				</span>
+				<span class="hint">Use 52 for a full year, or fewer to account for unpaid leave.</span>
+			</label>
+		</form>
+
+		<div class="panel result-panel">
+			<div class="panel-head result-head">
+				<span class="mono">02 — Result</span>
+				<label class="tax-select">
+					<span class="sr-only">Tax estimate</span>
+					<select id="tax-scenario" name="tax-scenario">
+						<option value="standard" selected>Net · Standard (18%)</option>
+						<option value="gross">Gross pay (0%)</option>
+						<option value="fica">Net · FICA only (7.65%)</option>
+						<option value="highTax">Net · High-tax state (24%)</option>
+						<option value="noIncomeTax">Net · No income tax (15%)</option>
+					</select>
+				</label>
+			</div>
+
+			<div class="headline" aria-live="polite">
+				<span class="result-label" id="result-label">Estimated take-home / week</span>
+				<strong class="result-value" id="net-weekly">{money(initialNetWeekly)}</strong>
+				<span class="result-note" id="result-note">After 18% estimated deductions · {money(initial.weeklyGross)} gross</span>
+			</div>
+
+			<div class="stat-grid">
+				<div class="stat">
+					<span>Gross / week</span>
+					<strong id="gross-weekly">{money(initial.weeklyGross)}</strong>
+				</div>
+				<div class="stat">
+					<span>Take-home / year</span>
+					<strong id="net-annual">{money(initial.annualGross * (1 - initialTax.rate))}</strong>
+				</div>
+				<div class="stat">
+					<span>Gross / year</span>
+					<strong id="gross-annual">{money(initial.annualGross)}</strong>
+				</div>
+			</div>
+
+			<div class="breakdown">
+				<div class="line">
+					<span>Regular <em id="regular-hours">{hours(initial.regularHours)} hrs</em></span>
+					<span id="regular-pay">{money(initial.regularPay)}</span>
+				</div>
+				<div class="line">
+					<span>Overtime (1.5×) <em id="overtime-hours">{hours(initial.overtimeHours)} hrs</em></span>
+					<span id="overtime-pay">{money(initial.overtimePay)}</span>
+				</div>
+				<div class="line">
+					<span>Double time (2×) <em id="double-hours">{hours(initial.doubleTimeHours)} hrs</em></span>
+					<span id="double-pay">{money(initial.doubleTimePay)}</span>
+				</div>
+				<div class="line line-tax">
+					<span>Estimated taxes</span>
+					<span id="tax-amount">−{money(initialTaxAmount)}</span>
+				</div>
+				<div class="line line-net">
+					<span>Net weekly</span>
+					<span id="net-weekly-mini">{money(initialNetWeekly)}</span>
+				</div>
+			</div>
+
+			<p class="result-disclaimer">Estimates only. Federal, state, and local withholding varies by filing status, deductions, and state rules.</p>
+		</div>
+	</div>
+
+	<div class="panel table-panel">
+		<div class="table-head">
+			<div>
+				<span class="mono">03 — Frequency</span>
+				<h3>Gross and take-home by pay period</h3>
+			</div>
+			<p class="hint">Annual gross converted across 52 weeks. Semi-monthly pays 24 times; bi-weekly pays 26.</p>
+		</div>
+		<div class="table-scroll">
+			<table>
+				<caption class="sr-only">Estimated gross and net pay by frequency</caption>
+				<thead>
+					<tr>
+						<th scope="col">Frequency</th>
+						<th scope="col">Per year</th>
+						<th scope="col" class="num">Gross</th>
+						<th scope="col" class="num">Take-home</th>
+					</tr>
+				</thead>
+				<tbody id="frequency-body">
+					{initialRows.map((row) => (
+						<tr>
+							<td>{row.label}</td>
+							<td class="muted" id={`freq-${row.key}-periods`}>{row.periodsLabel}</td>
+							<td class="num" id={`freq-${row.key}-gross`}>{money(row.gross)}</td>
+							<td class="num" id={`freq-${row.key}-net`}>
+								{money(row.gross * (1 - initialTax.rate))}
+							</td>
+						</tr>
+					))}
+				</tbody>
+			</table>
+		</div>
+	</div>
+</section>
+
+<script>
+	import {
+		calculateShift,
+		calculateStandard,
+		getFrequencyRows,
+		TAX_SCENARIOS,
+	} from '../lib/payroll';
+
+	const root = document.getElementById('calculator');
+	const form = document.getElementById('pay-form');
+
+	if (root && form) {
+		const byId = (id) => document.getElementById(id);
+		const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+		const money = (value) =>
+			value.toLocaleString('en-US', {
+				style: 'currency',
+				currency: 'USD',
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 2,
+			});
+
+		const hours = (value) =>
+			value.toLocaleString('en-US', { maximumFractionDigits: 1 });
+
+		const readNumber = (input, min, max, fallback) => {
+			const parsed = Number.parseFloat(input?.value ?? '');
+			if (!Number.isFinite(parsed)) return fallback;
+			return clamp(parsed, min, max);
+		};
+
+		const percent = (rate) => {
+			const value = Math.round(rate * 10000) / 100;
+			return `${value.toLocaleString('en-US', { maximumFractionDigits: 2 })}%`;
+		};
+
+		const activeMode = () =>
+			form.querySelector('input[name="shift-mode"]:checked')?.value ?? 'standard';
+
+		const syncPanels = () => {
+			const mode = activeMode();
+			root.querySelectorAll('[data-panel]').forEach((panel) => {
+				panel.hidden = panel.dataset.panel !== mode;
+			});
+		};
+
+		const render = () => {
+			const hourlyRate = readNumber(byId('hourly-rate'), 0, 10000, 0);
+			const weeksPerYear = readNumber(byId('weeks-year'), 1, 52, 52);
+			const mode = activeMode();
+
+			let result;
+			let payablePerShift = 0;
+
+			if (mode === 'shift') {
+				const sleepDeduction = readNumber(byId('sleep-deduction'), 0, 8, 8);
+				const mealDeduction = readNumber(byId('meal-deduction'), 0, 3, 3);
+				payablePerShift = Math.max(0, 24 - sleepDeduction - mealDeduction);
+
+				result = calculateShift({
+					hourlyRate,
+					shiftsPerWeek: readNumber(byId('shifts-week'), 0, 7, 5),
+					sleepDeduction,
+					mealDeduction,
+					dailyOvertime: Boolean(byId('daily-overtime')?.checked),
+					weeksPerYear,
+				});
+			} else {
+				result = calculateStandard({
+					hourlyRate,
+					hoursPerWeek: readNumber(byId('hours-week'), 0, 168, 40),
+					doubleTimeHours: readNumber(byId('double-time'), 0, 168, 0),
+					weeksPerYear,
+				});
+			}
+
+			const scenarioKey = byId('tax-scenario')?.value ?? 'standard';
+			const taxRate = TAX_SCENARIOS[scenarioKey]?.rate ?? TAX_SCENARIOS.standard.rate;
+			const taxAmount = result.weeklyGross * taxRate;
+			const netWeekly = result.weeklyGross - taxAmount;
+			const netAnnual = result.annualGross - result.annualGross * taxRate;
+
+			byId('net-weekly').textContent = money(netWeekly);
+			byId('gross-weekly').textContent = money(result.weeklyGross);
+			byId('net-annual').textContent = money(netAnnual);
+			byId('gross-annual').textContent = money(result.annualGross);
+
+			byId('result-label').textContent =
+				taxRate === 0 ? 'Estimated gross / week' : 'Estimated take-home / week';
+			byId('result-note').textContent =
+				taxRate === 0
+					? `No deductions applied · ${money(result.weeklyGross)} gross`
+					: `After ${percent(taxRate)} estimated deductions · ${money(result.weeklyGross)} gross`;
+
+			byId('regular-hours').textContent = `${hours(result.regularHours)} hrs`;
+			byId('regular-pay').textContent = money(result.regularPay);
+			byId('overtime-hours').textContent = `${hours(result.overtimeHours)} hrs`;
+			byId('overtime-pay').textContent = money(result.overtimePay);
+			byId('double-hours').textContent = `${hours(result.doubleTimeHours)} hrs`;
+			byId('double-pay').textContent = money(result.doubleTimePay);
+			byId('tax-amount').textContent =
+				taxAmount === 0 ? money(0) : `−${money(taxAmount)}`;
+			byId('net-weekly-mini').textContent = money(netWeekly);
+
+			const payableReadout = byId('payable-per-shift');
+			if (payableReadout) payableReadout.textContent = `${hours(payablePerShift)} hrs`;
+
+			const rows = getFrequencyRows(result, hourlyRate, weeksPerYear);
+			rows.forEach((row) => {
+				const periods = byId(`freq-${row.key}-periods`);
+				const gross = byId(`freq-${row.key}-gross`);
+				const net = byId(`freq-${row.key}-net`);
+				if (periods) periods.textContent = row.periodsLabel;
+				if (gross) gross.textContent = money(row.gross);
+				if (net) net.textContent = money(row.gross * (1 - taxRate));
+			});
+		};
+
+		form.querySelectorAll('input[name="shift-mode"]').forEach((input) => {
+			input.addEventListener('change', () => {
+				syncPanels();
+				render();
+			});
+		});
+
+		root.addEventListener('input', render);
+		root.addEventListener('change', render);
+
+		syncPanels();
+		render();
+	}
+</script>
+
+<style>
+	.calculator {
+		display: grid;
+		gap: 16px;
+	}
+
+	.calc-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+		gap: 16px;
+		align-items: start;
+	}
+
+	.panel {
+		background: #ffffff;
+		border: 1px solid var(--hairline, #ebebeb);
+		border-radius: 16px;
+	}
+
+	.form-panel {
+		display: flex;
+		flex-direction: column;
+		gap: 24px;
+		padding: 24px;
+	}
+
+	.panel-head {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	.panel-head h2 {
+		margin: 0;
+		font-size: 20px;
+		font-weight: 600;
+		letter-spacing: -0.4px;
+		line-height: 28px;
+	}
+
+	.mono {
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: 12px;
+		font-weight: 500;
+		line-height: 16px;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--mute, #8f8f8f);
+	}
+
+	.field {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		min-width: 0;
+	}
+
+	.field-label {
+		font-size: 14px;
+		font-weight: 500;
+		letter-spacing: -0.28px;
+		color: var(--ink, #171717);
+	}
+
+	.field-row {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 12px;
+	}
+
+	.field-stack {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+
+	.field-stack[hidden] {
+		display: none;
+	}
+
+	.control {
+		display: flex;
+		align-items: center;
+		height: 40px;
+		background: #ffffff;
+		border: 1px solid var(--hairline, #ebebeb);
+		border-radius: 6px;
+		transition:
+			border-color 0.15s ease,
+			box-shadow 0.15s ease;
+	}
+
+	.control:focus-within {
+		border-color: var(--ink, #171717);
+		box-shadow: 0 0 0 3px rgba(23, 23, 23, 0.08);
+	}
+
+	.control input {
+		width: 100%;
+		min-width: 0;
+		height: 100%;
+		border: 0;
+		background: transparent;
+		padding: 0 12px;
+		font: inherit;
+		font-size: 14px;
+		color: var(--ink, #171717);
+		outline: none;
+	}
+
+	.control-prefix input {
+		padding-left: 4px;
+	}
+
+	.control-suffix input {
+		padding-right: 4px;
+	}
+
+	.affix {
+		flex: none;
+		padding: 0 12px;
+		font-size: 13px;
+		color: var(--mute, #8f8f8f);
+	}
+
+	.control-prefix .affix {
+		padding-right: 0;
+		padding-left: 12px;
+	}
+
+	.control-suffix .affix {
+		padding-left: 4px;
+		padding-right: 12px;
+	}
+
+	.hint {
+		margin: 0;
+		font-size: 12px;
+		line-height: 16px;
+		color: var(--mute, #8f8f8f);
+	}
+
+	.mode-field {
+		margin: 0;
+		padding: 0;
+		border: 0;
+	}
+
+	.mode-field legend {
+		padding: 0;
+		margin-bottom: 6px;
+	}
+
+	.segmented {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 4px;
+		padding: 4px;
+		background: var(--hairline-soft, #f2f2f2);
+		border-radius: 100px;
+	}
+
+	.segmented label {
+		position: relative;
+		cursor: pointer;
+	}
+
+	.segmented input {
+		position: absolute;
+		inset: 0;
+		opacity: 0;
+		width: 100%;
+		height: 100%;
+		margin: 0;
+		cursor: pointer;
+	}
+
+	.segmented span {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		height: 34px;
+		border-radius: 100px;
+		font-size: 14px;
+		font-weight: 500;
+		color: var(--body, #4d4d4d);
+		transition:
+			background 0.15s ease,
+			color 0.15s ease,
+			box-shadow 0.15s ease;
+	}
+
+	.segmented input:checked + span {
+		background: var(--ink, #171717);
+		color: #ffffff;
+	}
+
+	.segmented input:focus-visible + span {
+		box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.35);
+	}
+
+	.readout {
+		display: flex;
+		align-items: center;
+		height: 40px;
+		padding: 0 12px;
+		border: 1px dashed var(--hairline, #ebebeb);
+		border-radius: 6px;
+		background: var(--canvas, #fafafa);
+		font-size: 14px;
+		font-weight: 500;
+		color: var(--ink, #171717);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.switch-row {
+		display: grid;
+		grid-template-columns: auto 1fr;
+		gap: 12px;
+		align-items: start;
+		padding: 12px;
+		border: 1px solid var(--hairline, #ebebeb);
+		border-radius: 8px;
+		cursor: pointer;
+	}
+
+	.switch-row input {
+		position: absolute;
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	.switch {
+		position: relative;
+		width: 36px;
+		height: 20px;
+		margin-top: 2px;
+		border-radius: 100px;
+		background: #e3e3e3;
+		transition: background 0.15s ease;
+	}
+
+	.switch::after {
+		content: '';
+		position: absolute;
+		top: 2px;
+		left: 2px;
+		width: 16px;
+		height: 16px;
+		border-radius: 50%;
+		background: #ffffff;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+		transition: transform 0.15s ease;
+	}
+
+	.switch-row input:checked + .switch {
+		background: var(--ink, #171717);
+	}
+
+	.switch-row input:checked + .switch::after {
+		transform: translateX(16px);
+	}
+
+	.switch-row input:focus-visible + .switch {
+		box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.35);
+	}
+
+	.switch-copy {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	.switch-copy strong {
+		font-size: 14px;
+		font-weight: 500;
+		color: var(--ink, #171717);
+	}
+
+	.switch-copy small {
+		font-size: 12px;
+		line-height: 16px;
+		color: var(--mute, #8f8f8f);
+	}
+
+	.field-weeks {
+		padding-top: 20px;
+		border-top: 1px solid var(--hairline-soft, #f2f2f2);
+	}
+
+	.result-panel {
+		position: sticky;
+		top: 80px;
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+		padding: 24px;
+		overflow: hidden;
+	}
+
+	.result-head {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+	}
+
+	.tax-select select {
+		appearance: none;
+		height: 32px;
+		max-width: 210px;
+		padding: 0 28px 0 10px;
+		border: 1px solid var(--hairline, #ebebeb);
+		border-radius: 100px;
+		background: #ffffff
+			url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23171717' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+			no-repeat right 10px center;
+		font: inherit;
+		font-size: 12px;
+		font-weight: 500;
+		color: var(--ink, #171717);
+		cursor: pointer;
+	}
+
+	.tax-select select:focus-visible {
+		outline: 2px solid var(--link, #0070f3);
+		outline-offset: 2px;
+	}
+
+	.headline {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		padding-bottom: 20px;
+		border-bottom: 1px solid var(--hairline-soft, #f2f2f2);
+	}
+
+	.result-label {
+		font-size: 14px;
+		font-weight: 500;
+		color: var(--body, #4d4d4d);
+	}
+
+	.result-value {
+		font-size: clamp(38px, 6vw, 52px);
+		font-weight: 600;
+		line-height: 1.05;
+		letter-spacing: -2.4px;
+		color: var(--ink, #171717);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.result-note {
+		font-size: 12px;
+		line-height: 16px;
+		color: var(--mute, #8f8f8f);
+	}
+
+	.stat-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 8px;
+	}
+
+	.stat {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		padding: 12px;
+		border: 1px solid var(--hairline, #ebebeb);
+		border-radius: 8px;
+	}
+
+	.stat span {
+		font-size: 12px;
+		line-height: 16px;
+		color: var(--mute, #8f8f8f);
+	}
+
+	.stat strong {
+		font-size: 14px;
+		font-weight: 500;
+		color: var(--ink, #171717);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.breakdown {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	.line {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 16px;
+		padding: 8px 0;
+		font-size: 13px;
+		color: var(--body, #4d4d4d);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.line em {
+		margin-left: 4px;
+		font-style: normal;
+		color: var(--faint, #a1a1a1);
+	}
+
+	.line-tax {
+		margin-top: 6px;
+		padding-top: 12px;
+		border-top: 1px solid var(--hairline-soft, #f2f2f2);
+	}
+
+	.line-net {
+		padding: 12px;
+		border-radius: 8px;
+		background: var(--canvas, #fafafa);
+		font-weight: 500;
+		color: var(--ink, #171717);
+	}
+
+	.result-disclaimer {
+		margin: 0;
+		padding-top: 16px;
+		border-top: 1px solid var(--hairline-soft, #f2f2f2);
+		font-size: 12px;
+		line-height: 17px;
+		color: var(--faint, #a1a1a1);
+	}
+
+	.table-panel {
+		padding: 24px;
+	}
+
+	.table-head {
+		display: flex;
+		align-items: end;
+		justify-content: space-between;
+		gap: 24px;
+		margin-bottom: 16px;
+	}
+
+	.table-head h3 {
+		margin: 4px 0 0;
+		font-size: 20px;
+		font-weight: 600;
+		letter-spacing: -0.4px;
+		line-height: 28px;
+	}
+
+	.table-head .hint {
+		max-width: 320px;
+		text-align: right;
+	}
+
+	.table-scroll {
+		overflow-x: auto;
+	}
+
+	table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 14px;
+		font-variant-numeric: tabular-nums;
+	}
+
+	thead th {
+		padding: 10px 12px;
+		border-bottom: 1px solid var(--hairline, #ebebeb);
+		text-align: left;
+		font-size: 12px;
+		font-weight: 500;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--mute, #8f8f8f);
+		white-space: nowrap;
+	}
+
+	tbody td {
+		padding: 12px;
+		border-bottom: 1px solid var(--hairline-soft, #f2f2f2);
+		color: var(--ink, #171717);
+		white-space: nowrap;
+	}
+
+	tbody tr:last-child td {
+		border-bottom: 0;
+	}
+
+	tbody tr:hover td {
+		background: var(--canvas, #fafafa);
+	}
+
+	.num {
+		text-align: right;
+	}
+
+	.muted {
+		color: var(--mute, #8f8f8f);
+	}
+
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
+	}
+
+	@media (max-width: 940px) {
+		.calc-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.result-panel {
+			position: static;
+		}
+	}
+
+	@media (max-width: 600px) {
+		.form-panel,
+		.result-panel,
+		.table-panel {
+			padding: 20px;
+		}
+
+		.field-row {
+			grid-template-columns: 1fr;
+		}
+
+		.stat-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.table-head {
+			align-items: flex-start;
+			flex-direction: column;
+			gap: 8px;
+		}
+
+		.table-head .hint {
+			text-align: left;
+		}
+
+		.result-head {
+			align-items: flex-start;
+			flex-direction: column;
+		}
+
+		.tax-select,
+		.tax-select select {
+			width: 100%;
+			max-width: none;
+		}
+	}
+</style>

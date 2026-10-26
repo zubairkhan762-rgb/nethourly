@@ -1,0 +1,2118 @@
+---
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import EditorialGuide from '../components/EditorialGuide.astro';
+import FaqSection from '../components/FaqSection.astro';
+import Layout from '../layouts/Layout.astro';
+import {
+	faqBiWeeklyVsSemiMonthly,
+	faqCaliforniaDailyOvertime,
+	faqCaregiverSleepMeals,
+	faqFica,
+} from '../data/faqs';
+import { calculateShiftWeek, TAX_SCENARIOS } from '../lib/payroll';
+import { webApplicationSchema } from '../lib/seo';
+import { DEFAULT_SHIFT_PRESET, SHIFT_PRESETS } from '../lib/shift-presets';
+
+const preset = DEFAULT_SHIFT_PRESET;
+const initialShifts = 3;
+const initialInput = {
+	hourlyRate: preset.hourlyRate,
+	differential: preset.differential,
+	totalShiftHours: preset.totalShiftHours,
+	shiftsPerWeek: initialShifts,
+	sleepHours: preset.sleepEnabled ? preset.sleepHours : 0,
+	mealHours: preset.mealEnabled ? preset.mealHours : 0,
+	mode: preset.mode,
+};
+
+const initial = calculateShiftWeek(initialInput);
+const initialTax = TAX_SCENARIOS.standard;
+const initialPerShiftGross = initial.weeklyGross / initialShifts;
+const initialPerShiftNet = initialPerShiftGross * (1 - initialTax.rate);
+const initialWeeklyNet = initial.weeklyGross * (1 - initialTax.rate);
+const initialBiWeeklyNet = initial.biWeeklyGross * (1 - initialTax.rate);
+const initialMonthlyNet = initial.monthlyGross * (1 - initialTax.rate);
+const initialAnnualNet = initial.annualGross * (1 - initialTax.rate);
+
+const money = (value: number) =>
+	value.toLocaleString('en-US', {
+		style: 'currency',
+		currency: 'USD',
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+	});
+
+const hoursText = (value: number) =>
+	value.toLocaleString('en-US', { maximumFractionDigits: 1 });
+
+const width = (value: number) =>
+	`${((value / initialInput.totalShiftHours) * 100).toFixed(2)}%`;
+
+const ratePresets = [16, 18, 20, 25, 35];
+
+const modeNote =
+	'Federal overtime is calculated on the full week, then averaged across shifts.';
+
+const breadcrumbs = [
+	{ label: 'Home', href: '/' },
+	{ label: '24-Hour Shift Calculator' },
+];
+
+const schema = webApplicationSchema({
+	name: '24-Hour Shift & Live-In Caregiver Pay Calculator',
+	description:
+		'Calculate 24-hour shift pay with FLSA sleep and meal deductions, California daily overtime, shift differentials, and estimated take-home pay.',
+	path: '/24-hour-shift-calculator',
+});
+
+const faqs = [
+	faqCaregiverSleepMeals,
+	{
+		question: 'How is federal overtime calculated across a week of 24-hour shifts?',
+		answer:
+			'Federal FLSA overtime is a weekly test. Add every payable hour across the 7-day workweek; the first 40 hours are paid at 1× and hours above 40 at 1.5×. A 24-hour shift with 13 payable hours worked three times a week totals 39 payable hours, so no federal overtime applies. The calculator shows the exact weekly result and divides it by the number of shifts for the per-shift average.',
+	},
+	faqCaliforniaDailyOvertime,
+	{
+		question: 'Does a night or weekend differential count toward overtime?',
+		answer:
+			'Yes. A shift differential is generally included in the FLSA regular rate, so it raises the base used for the 1.5× and 2× multipliers. NetHourly adds the differential to the hourly rate before applying overtime, which matches the regular-rate approach for non-discretionary shift pay.',
+	},
+	faqBiWeeklyVsSemiMonthly,
+	faqFica,
+];
+---
+
+<Layout
+	title="24-Hour Shift & Live-In Caregiver Pay Calculator | Nethourly"
+	description="Calculate live-in caregiver, nurse, firefighter, and EMT pay for 24-hour shifts with FLSA sleep and meal deductions, California daily overtime, night differential, and take-home estimates."
+	schema={schema}
+>
+	<Breadcrumbs items={breadcrumbs} />
+	<section class="page-hero">
+		<div class="mesh" aria-hidden="true"></div>
+		<div class="shell hero-inner">
+			<p class="eyebrow mono">24-hour shifts · FLSA sleep &amp; meal rules</p>
+			<h1>24-hour shift pay calculator.</h1>
+			<p class="lede">
+				Built for live-in caregivers, nurses, firefighters, EMTs, and on-call workers.
+				Deduct sleep and meal time, split California daily overtime, add shift differentials,
+				and see gross and take-home pay per shift.
+			</p>
+			<ul class="hero-tags" aria-label="Who this calculator is for">
+				<li>Live-in caregivers</li>
+				<li>Nurses</li>
+				<li>Firefighters</li>
+				<li>EMTs</li>
+				<li>On-call workers</li>
+			</ul>
+		</div>
+	</section>
+
+	<section class="calculator-section" id="calculator" aria-label="24-hour shift pay calculator">
+		<div class="shell calc-grid">
+			<form id="shift-form" class="panel controls" novalidate>
+				<div class="panel-head">
+					<span class="mono">01 — Shift setup</span>
+					<h2>Build your shift</h2>
+					<p class="hint">Start with a role preset, then adjust any detail.</p>
+				</div>
+
+				<div class="form-block">
+					<div class="block-head">
+						<span class="field-label">Quick role presets</span>
+						<span class="hint">One click fills the shift.</span>
+					</div>
+					<div class="presets">
+						{SHIFT_PRESETS.map((item) => (
+							<button
+								type="button"
+								class="preset"
+								data-preset={item.id}
+								aria-pressed="false"
+								title={item.label}
+							>
+								{item.label}
+							</button>
+						))}
+					</div>
+				</div>
+
+				<div class="form-block">
+					<div class="field">
+						<span class="field-label">Base hourly rate</span>
+						<span class="control control-prefix">
+							<span class="affix" aria-hidden="true">$</span>
+							<input
+								id="shift-rate"
+								name="shift-rate"
+								type="number"
+								inputmode="decimal"
+								min="0"
+								max="10000"
+								step="0.01"
+								value={preset.hourlyRate}
+							/>
+						</span>
+					</div>
+					<div class="rate-presets" role="group" aria-label="Quick hourly rates">
+						{ratePresets.map((rate) => (
+							<button
+								type="button"
+								class="rate-pill"
+								data-rate={rate}
+								aria-pressed={rate === preset.hourlyRate ? 'true' : 'false'}
+							>
+								${rate}
+							</button>
+						))}
+					</div>
+				</div>
+
+				<div class="slider-grid">
+					<label class="slider-field" for="shift-hours">
+						<span class="slider-head">
+							<span class="field-label">Total shift length</span>
+							<output class="slider-value" id="shift-hours-out" for="shift-hours">24 hrs</output>
+						</span>
+						<input
+							id="shift-hours"
+							name="shift-hours"
+							type="range"
+							min="8"
+							max="24"
+							step="1"
+							value={preset.totalShiftHours}
+						/>
+						<span class="range-labels"><span>8 hrs</span><span>24 hrs</span></span>
+					</label>
+
+					<label class="slider-field" for="shifts-week">
+						<span class="slider-head">
+							<span class="field-label">Shifts per week</span>
+							<output class="slider-value" id="shifts-week-out" for="shifts-week">3</output>
+						</span>
+						<input
+							id="shifts-week"
+							name="shifts-week"
+							type="range"
+							min="1"
+							max="7"
+							step="1"
+							value={initialShifts}
+						/>
+						<span class="range-labels"><span>1</span><span>7</span></span>
+					</label>
+
+					<label class="slider-field" for="differential">
+						<span class="slider-head">
+							<span class="field-label">Night / weekend differential</span>
+							<output class="slider-value" id="differential-out" for="differential">+$0.00/hr</output>
+						</span>
+						<input
+							id="differential"
+							name="differential"
+							type="range"
+							min="0"
+							max="10"
+							step="0.5"
+							value={preset.differential}
+						/>
+						<span class="range-labels"><span>+$0.00</span><span>+$10.00/hr</span></span>
+					</label>
+				</div>
+
+				<div class="form-block">
+					<div class="block-head">
+						<span class="field-label">FLSA sleep &amp; meal exclusions</span>
+						<details class="tip">
+							<summary aria-label="FLSA sleep and meal exclusion rules">i</summary>
+							<div class="tip-bubble">
+								<strong>FLSA exclusion rules</strong>
+								<p>
+									Sleep time may be excluded only when the worker gets at least 5 hours of
+									uninterrupted sleep. Meals must be duty-free. If the worker must remain on
+									duty, the time is generally payable.
+								</p>
+							</div>
+						</details>
+					</div>
+
+					<div class="deduction">
+						<div class="deduction-head">
+							<label class="switch-row" for="sleep-toggle">
+								<input id="sleep-toggle" name="sleep-toggle" type="checkbox" checked />
+								<span class="switch" aria-hidden="true"></span>
+								<span class="switch-copy">
+									<strong>Exclude unpaid sleep time</strong>
+									<small>Up to 8 hrs if the worker gets 5+ hrs of uninterrupted sleep.</small>
+								</span>
+							</label>
+							<details class="tip">
+								<summary aria-label="About the FLSA 5-hour sleep rule">i</summary>
+								<div class="tip-bubble">
+									<strong>The 5-hour sleep rule</strong>
+									<p>
+										FLSA allows up to 8 hours of sleep time to be excluded from hours worked
+										only if the employee receives at least 5 hours of uninterrupted sleep. If
+										sleep is interrupted and fewer than 5 hours are available, the sleep period
+										is generally compensable.
+									</p>
+								</div>
+							</details>
+						</div>
+						<div class="deduction-slider" id="sleep-slider">
+							<input
+								id="sleep-hours"
+								name="sleep-hours"
+								type="range"
+								min="0"
+								max="8"
+								step="1"
+								value="8"
+								aria-label="Sleep hours to exclude"
+							/>
+							<output class="deduction-value" id="sleep-hours-out">8 hrs</output>
+						</div>
+					</div>
+
+					<div class="deduction">
+						<div class="deduction-head">
+							<label class="switch-row" for="meal-toggle">
+								<input id="meal-toggle" name="meal-toggle" type="checkbox" checked />
+								<span class="switch" aria-hidden="true"></span>
+								<span class="switch-copy">
+									<strong>Exclude duty-free meal breaks</strong>
+									<small>Up to 3 hrs for breakfast, lunch, and dinner.</small>
+								</span>
+							</label>
+							<details class="tip">
+								<summary aria-label="About FLSA meal break exclusions">i</summary>
+								<div class="tip-bubble">
+									<strong>Duty-free meals</strong>
+									<p>
+										Up to 3 meal hours can be excluded when the worker is completely relieved
+										from duty — typically 1 hour each for breakfast, lunch, and dinner. An
+										on-duty meal is paid time.
+									</p>
+								</div>
+							</details>
+						</div>
+						<div class="deduction-slider" id="meal-slider">
+							<input
+								id="meal-hours"
+								name="meal-hours"
+								type="range"
+								min="0"
+								max="3"
+								step="1"
+								value="3"
+								aria-label="Meal hours to exclude"
+							/>
+							<output class="deduction-value" id="meal-hours-out">3 hrs</output>
+						</div>
+					</div>
+
+					<div class="payable-badge">
+						<div>
+							<span class="mono">Net payable hours per shift</span>
+							<strong id="payable-hours">13</strong>
+						</div>
+						<p id="payable-equation">24 − 8 − 3 = 13 payable hours</p>
+					</div>
+				</div>
+
+				<fieldset class="form-block mode-fieldset">
+					<legend class="field-label">Overtime calculation mode</legend>
+					<div class="mode-grid">
+						<label class="mode-card">
+							<input type="radio" name="pay-mode" value="federal" checked />
+							<span class="mode-body">
+								<strong>Standard Federal (FLSA Weekly OT)</strong>
+								<small>All hours at 1× up to 40/week, then 1.5× above 40.</small>
+							</span>
+						</label>
+						<label class="mode-card">
+							<input type="radio" name="pay-mode" value="california" />
+							<span class="mode-body">
+								<strong>California Daily Overtime</strong>
+								<small>Per shift: first 8 hrs at 1×, hours 8–12 at 1.5×, beyond 12 at 2×.</small>
+							</span>
+						</label>
+						<label class="mode-card">
+							<input type="radio" name="pay-mode" value="flat" />
+							<span class="mode-body">
+								<strong>Flat / Straight Hourly</strong>
+								<small>Every payable hour is paid at the regular 1× rate.</small>
+							</span>
+						</label>
+					</div>
+				</fieldset>
+			</form>
+
+			<div class="panel result-panel">
+				<div class="result-head">
+					<div class="panel-head">
+						<span class="mono">02 — Payout</span>
+						<h2>Shift earnings</h2>
+					</div>
+					<label class="tax-select">
+						<span class="sr-only">Tax estimate</span>
+						<select id="shift-tax" name="shift-tax">
+							<option value="standard" selected>Net · Standard (18%)</option>
+							<option value="gross">Gross pay (0%)</option>
+							<option value="fica">Net · FICA only (7.65%)</option>
+							<option value="highTax">Net · High-tax state (24%)</option>
+							<option value="noIncomeTax">Net · No income tax (15%)</option>
+						</select>
+					</label>
+				</div>
+
+				<p class="effective-note" id="effective-rate-note">
+					Base {money(preset.hourlyRate)}/hr · {money(preset.differential)} differential · 
+					{money(preset.hourlyRate + preset.differential)}/hr effective
+				</p>
+
+				<div class="split-card">
+					<div class="split-head">
+						<span class="field-label">Shift hour split</span>
+						<span class="hint" id="split-basis">Average per shift</span>
+					</div>
+					<div
+						class="split-bar"
+						id="split-bar"
+						role="img"
+						aria-label={`${hoursText(initial.perShiftHours.regular)} regular hours, ${hoursText(initial.perShiftHours.overtime)} overtime hours, ${hoursText(initial.perShiftHours.doubleTime)} double-time hours, and ${hoursText(initial.perShiftHours.unpaid)} unpaid hours per shift`}
+					>
+						<span class="seg seg-regular" id="bar-regular" style={`width:${width(initial.perShiftHours.regular)}`}></span>
+						<span class="seg seg-overtime" id="bar-overtime" style={`width:${width(initial.perShiftHours.overtime)}`}></span>
+						<span class="seg seg-double" id="bar-double" style={`width:${width(initial.perShiftHours.doubleTime)}`}></span>
+						<span class="seg seg-unpaid" id="bar-unpaid" style={`width:${width(initial.perShiftHours.unpaid)}`}></span>
+					</div>
+					<div class="split-legend">
+						<span><i class="dot dot-regular"></i>Regular <b id="bar-regular-hours">{hoursText(initial.perShiftHours.regular)}</b></span>
+						<span><i class="dot dot-overtime"></i>1.5× OT <b id="bar-overtime-hours">{hoursText(initial.perShiftHours.overtime)}</b></span>
+						<span><i class="dot dot-double"></i>2× DT <b id="bar-double-hours">{hoursText(initial.perShiftHours.doubleTime)}</b></span>
+						<span><i class="dot dot-unpaid"></i>Unpaid <b id="bar-unpaid-hours">{hoursText(initial.perShiftHours.unpaid)}</b></span>
+					</div>
+				</div>
+
+				<div class="payout-hero">
+					<span class="result-label">Pay per single shift</span>
+					<strong class="result-value" id="shift-gross">{money(initialPerShiftGross)}</strong>
+					<span class="result-sub">
+						Estimated net <b id="shift-net">{money(initialPerShiftNet)}</b> after 18%
+					</span>
+
+					<div class="hero-breakdown">
+						<div class="line">
+							<span>Regular 1× <em id="shift-regular-hours">{hoursText(initial.perShiftHours.regular)} hrs</em></span>
+							<b id="shift-regular-pay">{money(initial.perShiftPay.regular)}</b>
+						</div>
+						<div class="line">
+							<span>Overtime 1.5× <em id="shift-overtime-hours">{hoursText(initial.perShiftHours.overtime)} hrs</em></span>
+							<b id="shift-overtime-pay">{money(initial.perShiftPay.overtime)}</b>
+						</div>
+						<div class="line">
+							<span>Double time 2× <em id="shift-double-hours">{hoursText(initial.perShiftHours.doubleTime)} hrs</em></span>
+							<b id="shift-double-pay">{money(initial.perShiftPay.doubleTime)}</b>
+						</div>
+					</div>
+
+					<p class="mode-note" id="mode-note">{modeNote}</p>
+				</div>
+
+				<div class="payout-grid">
+					<div class="payout-card">
+						<span class="payout-label">Weekly · <span id="weekly-shifts-label">3</span> shifts</span>
+						<strong id="weekly-gross">{money(initial.weeklyGross)}</strong>
+						<small>Net <b id="weekly-net">{money(initialWeeklyNet)}</b></small>
+					</div>
+					<div class="payout-card">
+						<span class="payout-label">Bi-weekly · 26/yr</span>
+						<strong id="biweekly-gross">{money(initial.biWeeklyGross)}</strong>
+						<small>Net <b id="biweekly-net">{money(initialBiWeeklyNet)}</b></small>
+					</div>
+					<div class="payout-card">
+						<span class="payout-label">Monthly</span>
+						<strong id="monthly-gross">{money(initial.monthlyGross)}</strong>
+						<small>Net <b id="monthly-net">{money(initialMonthlyNet)}</b></small>
+					</div>
+					<div class="payout-card">
+						<span class="payout-label">Annual</span>
+						<strong id="annual-gross">{money(initial.annualGross)}</strong>
+						<small>Net <b id="annual-net">{money(initialAnnualNet)}</b></small>
+					</div>
+				</div>
+
+				<p class="result-disclaimer">
+					Estimates only. Sleep and meal exclusions depend on the actual duty arrangement.
+					Tax figures are simplified planning estimates, not withholding advice.
+				</p>
+			</div>
+		</div>
+	</section>
+
+	<section class="content-section" id="how-it-works">
+		<div class="shell content-grid">
+			<div class="prose">
+				<p class="eyebrow mono">How it works</p>
+				<h2>How 24-hour shift pay is calculated</h2>
+				<p>
+					A 24-hour shift does not automatically mean 24 paid hours. Under US FLSA rules,
+					employers may exclude certain sleep and meal periods, then apply federal or state
+					overtime rules to the remaining payable hours.
+				</p>
+
+				<h3>1. Find the payable hours</h3>
+				<p>
+					Start with the total shift length. Subtract excludable sleep time (up to 8 hours) and
+					duty-free meal time (up to 3 hours). The result is the number of hours paid per shift.
+				</p>
+				<p class="formula-inline">Payable hours = shift length − sleep − meals</p>
+
+				<h3>2. Apply the right overtime rule</h3>
+				<p>
+					Federal FLSA overtime is weekly: all payable hours up to 40 are paid at 1×, and hours
+					above 40 are paid at 1.5×. California daily overtime is shift-based: the first 8
+					payable hours are 1×, hours 8 to 12 are 1.5×, and hours beyond 12 are 2×. Flat mode
+					pays every payable hour at 1×.
+				</p>
+
+				<h3>3. Add differentials and estimate take-home</h3>
+				<p>
+					A night or weekend differential is added to the base rate before overtime is applied,
+					so it raises the effective regular rate. The take-home toggle then applies a simplified
+					US tax estimate — FICA only (7.65%), standard (18%), high-tax state (24%), or
+					no-income-tax state (15%).
+				</p>
+			</div>
+
+			<aside class="formula-card" aria-label="24-hour shift formulas">
+				<span class="mono">Quick formulas</span>
+				<div class="formula-row">
+					<span>Payable per shift</span>
+					<code>24 − sleep − meals</code>
+				</div>
+				<div class="formula-row">
+					<span>Federal weekly OT</span>
+					<code>40 × rate + excess × 1.5</code>
+				</div>
+				<div class="formula-row">
+					<span>California split</span>
+					<code>8 × 1 + 4 × 1.5 + rest × 2</code>
+				</div>
+				<div class="formula-row">
+					<span>Effective rate</span>
+					<code>base + differential</code>
+				</div>
+				<div class="formula-row">
+					<span>Annual shift pay</span>
+					<code>weekly × 52</code>
+				</div>
+			</aside>
+		</div>
+	</section>
+
+	<section class="content-section" id="overtime-modes">
+		<div class="shell">
+			<div class="content-head">
+				<p class="eyebrow mono">Overtime modes</p>
+				<h2>Which overtime rule applies?</h2>
+				<p>
+					The same 24-hour shift can produce very different pay depending on where and how the
+					worker is employed.
+				</p>
+			</div>
+			<div class="rule-grid">
+				<article class="rule-card">
+					<span class="card-num mono">Federal</span>
+					<h3>FLSA weekly overtime</h3>
+					<p>
+						Payable hours are totaled across the workweek. Anything above 40 hours is paid at
+						1.5×. A 24-hour shift at 13 payable hours, three times per week, stays under 40 and
+						has no federal overtime.
+					</p>
+				</article>
+				<article class="rule-card">
+					<span class="card-num mono">California</span>
+					<h3>Daily overtime split</h3>
+					<p>
+						Daily overtime applies per shift, regardless of the weekly total. The first 8 payable
+						hours are regular, hours 8 to 12 are time and a half, and hours past 12 are double
+						time.
+					</p>
+				</article>
+				<article class="rule-card">
+					<span class="card-num mono">Straight</span>
+					<h3>Flat hourly pay</h3>
+					<p>
+						Some firefighter, EMT, and alternative schedules pay every payable hour at the
+						regular rate, often with a built-in shift or schedule differential instead of weekly
+						overtime.
+					</p>
+				</article>
+			</div>
+		</div>
+	</section>
+
+	<EditorialGuide
+		id="shift-guide"
+		eyebrow="24-hour shift field guide"
+		title="The 24-hour shift, without the payroll guesswork."
+		lede="A 24-hour shift is a payroll document with a bed in it. The sleep and meal rules are specific, and the difference between 13 paid hours and 24 paid hours can be hundreds of dollars a week."
+		toc={[
+			{ id: 'sleep-rule', label: 'The sleep rule' },
+			{ id: 'meal-breaks', label: 'Meals vs. lunches' },
+			{ id: 'california-shifts', label: 'California vs. federal' },
+			{ id: 'nursing-shifts', label: '3x12 nursing' },
+		]}
+		asideNote="Sleep and meal exclusions depend on the actual duty arrangement and state law."
+	>
+		<h3 id="sleep-rule">The 8-hour sleep rule, in plain English</h3>
+		<p>
+			The federal rule lives at 29 CFR § 785.22. It applies to employees on duty for 24
+			hours or more. An employer may exclude a regularly scheduled sleep period of up to
+			eight hours, but only if four conditions are met: there is an agreement between the
+			employer and worker, adequate sleeping facilities are provided, the worker can usually
+			get an uninterrupted night's sleep, and the sleep period is bona fide. If the shift is
+			less than 24 hours, this rule does not let the employer exclude sleep at all.
+		</p>
+		<p>
+			The five-hour test is the one that decides most disputes. If the worker cannot get at
+			least five hours of uninterrupted sleep, the entire eight-hour sleep period must be
+			paid. If the worker gets five hours and is then woken for 20 minutes, the 20 minutes is
+			paid, but the remaining sleep time can still be excluded.
+		</p>
+		<p>
+			Calls to duty count. If a client wakes you at 11 p.m., 1 a.m., 3 a.m., and 5 a.m., you
+			did not get five straight hours. The full eight hours is payable. If you get six hours
+			straight and one 15-minute call, the 15 minutes is paid and the other sleep time can be
+			excluded. The test is not "did I sleep at all?" It is "did I get five hours without
+			interruption?"
+		</p>
+
+		<div class="editorial-callout">
+			<span class="mono">Write it down</span>
+			<p>
+				The federal rule allows an express or implied agreement. Some states require a
+				written agreement. Put the sleep window, meal periods, wake-up policy, and
+				deduction rules in writing before the first shift. A text message is better than a
+				verbal promise; a signed addendum is better than both.
+			</p>
+		</div>
+
+		<div class="editorial-example">
+			<div class="editorial-example-head">
+				<span class="mono">One $20/hr shift, two outcomes</span>
+				<strong>13 vs. 24 paid hours</strong>
+			</div>
+			<div class="editorial-example-row">
+				<span>8 sleep hours + 3 meal hours excluded</span>
+				<span>13 payable hours</span>
+			</div>
+			<div class="editorial-example-row">
+				<span>13 hours × $20 straight time</span>
+				<span>$260.00</span>
+			</div>
+			<div class="editorial-example-row">
+				<span>Sleep interrupted below 5 hours</span>
+				<span>24 payable hours</span>
+			</div>
+			<div class="editorial-example-row">
+				<span>24 hours × $20 straight time</span>
+				<span>$480.00</span>
+			</div>
+			<div class="editorial-example-row is-total">
+				<span>Difference per shift</span>
+				<span>$220.00</span>
+			</div>
+		</div>
+
+		<p>
+			That $220 gap is why the sleep log matters. Three shifts a week with the same
+			interruption pattern is $660 in straight-time pay before any overtime premium. If the
+			employer also applied the wrong overtime rule, the gap gets larger.
+		</p>
+
+		<h3 id="meal-breaks">Duty-free meals vs. working lunches</h3>
+		<p>
+			Employers can exclude up to three hours of meal time on a 24-hour shift, usually one
+			hour each for breakfast, lunch, and dinner. The key phrase is duty-free. You must be
+			completely relieved of all duties. Eating while watching a patient, answering a call
+			light, monitoring a seizure, or staying alone with a client who cannot be left
+			unsupervised is paid time.
+		</p>
+		<p>
+			A meal break is not duty-free if you cannot leave the work area, if you must respond
+			to the client, or if the employer controls your time. A break where you can leave the
+			premises and do what you want is more likely excludable. Even then, state rules may
+			require a paid meal period or a written waiver. The federal sleep and meal rule is not
+			a license to skip lunch.
+		</p>
+
+		<div class="editorial-split">
+			<div class="editorial-compare-card">
+				<span class="mono">Usually excludable</span>
+				<h4>Duty-free meal</h4>
+				<p>
+					You are relieved of all duties, can leave the work area, and are not responsible
+					for the client. The time is scheduled and recorded.
+				</p>
+			</div>
+			<div class="editorial-compare-card">
+				<span class="mono">Usually paid</span>
+				<h4>Working lunch</h4>
+				<p>
+					You eat at the desk, keep the monitor on, answer calls, or remain the only
+					responsible adult. The client's needs still control your time.
+				</p>
+			</div>
+		</div>
+
+		<p>
+			California adds meal-period rules on top. A 30-minute meal break is generally due
+			before the end of the fifth hour for shifts over five hours, and a second meal period
+			before the end of the 10th hour for shifts over 10 hours. If the break is missed, the
+			worker may be owed a premium. Health care employees have specific waivers and
+			12-hour-shift rules. The 24-hour sleep and meal exclusion does not override those meal
+			periods.
+		</p>
+
+		<div class="editorial-callout is-warning">
+			<span class="mono">The desk-lunch trap</span>
+			<p>
+				If you eat at the desk with one eye on the monitor, log it as work. The employer may
+				call it a lunch; a wage-and-hour investigator will look at whether you were actually
+				relieved. A 30-minute break that you never got is 30 minutes of pay, every shift,
+				every week.
+			</p>
+		</div>
+
+		<h3 id="california-shifts">California Wage Order 5, AB 1028, and the federal rule</h3>
+		<p>
+			California is not a federal copy. Wage Order 5 covers public housekeeping, including
+			many health care and residential care employers. It has daily overtime and specific
+			sleep and meal provisions for certain 24-hour shifts. The general daily overtime rule
+			is first eight hours at 1×, hours eight through 12 at 1.5×, and hours beyond 12 at 2×.
+			Weekly overtime after 40 also applies, but the same hour is not paid twice at two
+			different premiums; the worker gets the higher rate.
+		</p>
+		<p>
+			A common citation in caregiver threads is AB 1028. Check the bill text before you rely
+			on it. In recent sessions, AB 1028 has addressed other subjects, and the caregiver
+			overtime framework is usually traced to the Domestic Worker Bill of Rights (AB 241)
+			and Wage Order 5. Bill numbers get reused. If an employer cites a bill, ask for the
+			section and the effective date.
+		</p>
+		<p>
+			Run the same shift under both rules. At $20/hr, a 24-hour shift with eight sleep hours
+			and three meal hours has 13 payable hours. Three shifts a week is 39 payable hours.
+			Federal weekly pay is 39 × $20 = $780. California daily pay is 8 × $20 + 4 × $30 + 1 ×
+			$40 = $320 per shift, or $960 for three shifts. The California schedule pays $180 more
+			for the same 39 payable hours because daily overtime starts at hour eight of each
+			shift.
+		</p>
+		<p>
+			If no sleep or meal deduction applies, the shift is 24 payable hours. California daily
+			pay is 8 × $20 + 4 × $30 + 12 × $40 = $760 per shift, or $2,280 for three shifts.
+			Federal weekly pay is 40 × $20 + 32 × $30 = $1,760. The gap is $520. The bigger the
+			deduction, the more the daily rule matters.
+		</p>
+
+		<div class="editorial-split">
+			<div class="editorial-compare-card">
+				<span class="mono">Federal FLSA</span>
+				<h4>Weekly test</h4>
+				<p>
+					Add payable hours across the workweek. The first 40 are 1×; hours above 40 are
+					1.5×. A 39-hour week has no federal overtime.
+				</p>
+			</div>
+			<div class="editorial-compare-card">
+				<span class="mono">California</span>
+				<h4>Daily test</h4>
+				<p>
+					Each workday stands alone. First 8 payable hours at 1×, hours 8 to 12 at 1.5×,
+					and hours beyond 12 at 2×. A 13-hour day has 5 overtime hours.
+				</p>
+			</div>
+		</div>
+
+		<p class="editorial-footnote">
+			Wage Order 5 has exceptions and industry-specific rules. Some 24-hour care employees
+			may be covered by a different order. Confirm the order that covers your employer.
+		</p>
+
+		<h3 id="nursing-shifts">3x12 hospital shifts, differentials, and the fourth shift</h3>
+		<p>
+			A 3x12 schedule is 36 hours. Many hospitals treat 36 hours as full-time with benefits.
+			Under federal FLSA, 36 hours is under 40, so there is no weekly overtime in a normal
+			week. Under California daily overtime, each 12-hour shift can produce four hours of
+			daily overtime unless the hospital has a valid alternative workweek schedule. Many
+			hospitals do; some do not. Ask which schedule you are on.
+		</p>
+		<p>
+			Hospitals may use the FLSA 8/80 rule: overtime after eight hours in a day or 80 hours
+			in 14 days, not both. This is an alternative to the standard 40-hour workweek for
+			hospital employees. It does not apply to every facility or every role. If you are on
+			8/80, a 12-hour shift can create four hours of daily overtime even when your two-week
+			total stays under 80.
+		</p>
+		<p>
+			Night and weekend differentials are part of the regular rate. If your base is $40 and
+			you get a $4 night differential, your regular rate for those hours is $44. The 1.5×
+			overtime rate is $66, not $60. If the differential applies only to some hours, payroll
+			must use a weighted average. Non-discretionary bonuses, charge pay, preceptor pay, and
+			hazard pay generally count too.
+		</p>
+
+		<div class="editorial-example">
+			<div class="editorial-example-head">
+				<span class="mono">3x12 plus a fourth shift</span>
+				<strong>$40 base + $4 night</strong>
+			</div>
+			<div class="editorial-example-row">
+				<span>Regular rate for night hours</span>
+				<span>$44.00/hr</span>
+			</div>
+			<div class="editorial-example-row">
+				<span>36 hours × $44</span>
+				<span>$1,584.00/week</span>
+			</div>
+			<div class="editorial-example-row">
+				<span>48 hours: 40 × $44 + 8 × $66</span>
+				<span>$2,288.00/week</span>
+			</div>
+			<div class="editorial-example-row is-total">
+				<span>Extra pay from the fourth shift</span>
+				<span>$704.00</span>
+			</div>
+		</div>
+
+		<p>
+			The fourth shift is where the math changes. A 36-hour nurse who picks up a 12-hour
+			shift is at 48 hours, not 36 plus 12 straight time. The extra check may look great
+			until you see the hours. Check whether the hospital pays the differential on all hours,
+			whether the shift triggers daily overtime, and whether it pushes you over 40 in the
+			workweek.
+		</p>
+
+		<div class="editorial-callout">
+			<span class="mono">36 is full-time, not overtime</span>
+			<p>
+				Do not assume a 36-hour schedule is paid as 40. Some hospitals pay 36 for 40; others
+				pay 36. Read the offer. The difference is four hours of pay every week, or about
+				$8,320 a year at $40/hr before differentials.
+			</p>
+		</div>
+	</EditorialGuide>
+
+	<FaqSection
+		items={faqs}
+		eyebrow="Questions"
+		title="24-hour shift pay FAQ"
+		description="FLSA sleep and meal rules, California daily overtime, pay periods, and FICA."
+		id="faq"
+	/>
+</Layout>
+
+<script>
+	import { calculateShiftWeek, TAX_SCENARIOS } from '../lib/payroll';
+	import { SHIFT_PRESETS } from '../lib/shift-presets';
+
+	const root = document.getElementById('shift-form');
+	const resultPanel = document.querySelector('.result-panel');
+
+	if (root && resultPanel) {
+		const byId = (id) => document.getElementById(id);
+		const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+		const money = (value) =>
+			value.toLocaleString('en-US', {
+				style: 'currency',
+				currency: 'USD',
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 2,
+			});
+
+		const hours = (value) =>
+			value.toLocaleString('en-US', { maximumFractionDigits: 1 });
+
+		const readNumber = (id, fallback, min, max) => {
+			const input = byId(id);
+			const parsed = Number.parseFloat(input?.value ?? '');
+			if (!Number.isFinite(parsed)) return fallback;
+			return clamp(parsed, min, max);
+		};
+
+		const activeMode = () =>
+			root.querySelector('input[name="pay-mode"]:checked')?.value ?? 'federal';
+
+		const activeTax = () =>
+			TAX_SCENARIOS[byId('shift-tax')?.value ?? 'standard']?.rate ??
+			TAX_SCENARIOS.standard.rate;
+
+		const setPresetState = (id) => {
+			root.querySelectorAll('[data-preset]').forEach((button) => {
+				button.setAttribute('aria-pressed', button.dataset.preset === id ? 'true' : 'false');
+			});
+		};
+
+		const clearPresetState = () => setPresetState('');
+
+		const setRateState = (rate) => {
+			root.querySelectorAll('[data-rate]').forEach((button) => {
+				button.setAttribute(
+					'aria-pressed',
+					Math.abs(Number(button.dataset.rate) - rate) < 0.001 ? 'true' : 'false',
+				);
+			});
+		};
+
+		const updateDeductionUI = () => {
+			const sleepOn = Boolean(byId('sleep-toggle')?.checked);
+			const mealOn = Boolean(byId('meal-toggle')?.checked);
+			const sleepRange = byId('sleep-hours');
+			const mealRange = byId('meal-hours');
+			if (sleepRange) sleepRange.disabled = !sleepOn;
+			if (mealRange) mealRange.disabled = !mealOn;
+			byId('sleep-slider')?.classList.toggle('is-disabled', !sleepOn);
+			byId('meal-slider')?.classList.toggle('is-disabled', !mealOn);
+		};
+
+		const syncOutputs = () => {
+			const shiftHours = readNumber('shift-hours', 24, 8, 24);
+			const shifts = readNumber('shifts-week', 5, 1, 7);
+			const differential = readNumber('differential', 0, 0, 10);
+			const sleepHours = readNumber('sleep-hours', 8, 0, 8);
+			const mealHours = readNumber('meal-hours', 3, 0, 3);
+			const sleepOn = Boolean(byId('sleep-toggle')?.checked);
+			const mealOn = Boolean(byId('meal-toggle')?.checked);
+
+			byId('shift-hours-out').textContent = `${hours(shiftHours)} hrs`;
+			byId('shifts-week-out').textContent = hours(shifts);
+			byId('differential-out').textContent = `+${money(differential)}/hr`;
+			byId('sleep-hours-out').textContent = `${hours(sleepHours)} hrs`;
+			byId('meal-hours-out').textContent = `${hours(mealHours)} hrs`;
+
+			const payable = Math.max(
+				0,
+				shiftHours - (sleepOn ? sleepHours : 0) - (mealOn ? mealHours : 0),
+			);
+			const sleepUsed = sleepOn ? sleepHours : 0;
+			const mealUsed = mealOn ? mealHours : 0;
+
+			byId('payable-hours').textContent = hours(payable);
+			byId('payable-equation').textContent = `${hours(shiftHours)} − ${hours(sleepUsed)} − ${hours(mealUsed)} = ${hours(payable)} payable hours`;
+		};
+
+		const render = () => {
+			const hourlyRate = readNumber('shift-rate', 20, 0, 10000);
+			const differential = readNumber('differential', 0, 0, 10);
+			const totalShiftHours = readNumber('shift-hours', 24, 8, 24);
+			const shiftsPerWeek = readNumber('shifts-week', 5, 1, 7);
+			const sleepOn = Boolean(byId('sleep-toggle')?.checked);
+			const mealOn = Boolean(byId('meal-toggle')?.checked);
+			const sleepHours = readNumber('sleep-hours', 8, 0, 8);
+			const mealHours = readNumber('meal-hours', 3, 0, 3);
+			const mode = activeMode();
+
+			const result = calculateShiftWeek({
+				hourlyRate,
+				differential,
+				totalShiftHours,
+				shiftsPerWeek,
+				sleepHours: sleepOn ? sleepHours : 0,
+				mealHours: mealOn ? mealHours : 0,
+				mode,
+			});
+
+			const taxRate = activeTax();
+			const perShiftGross = result.weeklyGross / shiftsPerWeek;
+			const perShiftNet = perShiftGross * (1 - taxRate);
+			const weeklyNet = result.weeklyGross * (1 - taxRate);
+			const biWeeklyNet = result.biWeeklyGross * (1 - taxRate);
+			const monthlyNet = result.monthlyGross * (1 - taxRate);
+			const annualNet = result.annualGross * (1 - taxRate);
+
+			setRateState(hourlyRate);
+			syncOutputs();
+
+			byId('effective-rate-note').textContent =
+				`Base ${money(hourlyRate)}/hr · ${money(differential)} differential · ${money(result.effectiveRate)}/hr effective`;
+
+			byId('shift-gross').textContent = money(perShiftGross);
+			byId('shift-net').textContent = money(perShiftNet);
+			byId('shift-regular-hours').textContent = `${hours(result.perShiftHours.regular)} hrs`;
+			byId('shift-regular-pay').textContent = money(result.perShiftPay.regular);
+			byId('shift-overtime-hours').textContent = `${hours(result.perShiftHours.overtime)} hrs`;
+			byId('shift-overtime-pay').textContent = money(result.perShiftPay.overtime);
+			byId('shift-double-hours').textContent = `${hours(result.perShiftHours.doubleTime)} hrs`;
+			byId('shift-double-pay').textContent = money(result.perShiftPay.doubleTime);
+
+			byId('weekly-shifts-label').textContent = hours(shiftsPerWeek);
+			byId('weekly-gross').textContent = money(result.weeklyGross);
+			byId('weekly-net').textContent = money(weeklyNet);
+			byId('biweekly-gross').textContent = money(result.biWeeklyGross);
+			byId('biweekly-net').textContent = money(biWeeklyNet);
+			byId('monthly-gross').textContent = money(result.monthlyGross);
+			byId('monthly-net').textContent = money(monthlyNet);
+			byId('annual-gross').textContent = money(result.annualGross);
+			byId('annual-net').textContent = money(annualNet);
+
+			const totalForBar = totalShiftHours || 1;
+			const segments = [
+				['bar-regular', result.perShiftHours.regular, 'bar-regular-hours'],
+				['bar-overtime', result.perShiftHours.overtime, 'bar-overtime-hours'],
+				['bar-double', result.perShiftHours.doubleTime, 'bar-double-hours'],
+				['bar-unpaid', result.perShiftHours.unpaid, 'bar-unpaid-hours'],
+			];
+
+			segments.forEach(([barId, value, labelId]) => {
+				const bar = byId(barId);
+				if (bar) bar.style.width = `${(value / totalForBar) * 100}%`;
+				const label = byId(labelId);
+				if (label) label.textContent = hours(value);
+			});
+
+			const splitBar = byId('split-bar');
+			if (splitBar) {
+				splitBar.setAttribute(
+					'aria-label',
+					`${hours(result.perShiftHours.regular)} regular hours, ${hours(result.perShiftHours.overtime)} overtime hours, ${hours(result.perShiftHours.doubleTime)} double-time hours, and ${hours(result.perShiftHours.unpaid)} unpaid hours per shift`,
+				);
+			}
+
+			const note = byId('mode-note');
+			if (note) {
+				note.textContent =
+					mode === 'california'
+						? 'Daily split applied to each shift: 8 regular, 4 at 1.5×, then 2× beyond 12 payable hours.'
+						: mode === 'flat'
+							? 'Flat mode pays every payable hour at the regular 1× rate.'
+							: 'Federal overtime is calculated on the full week, then averaged across shifts.';
+			}
+
+			const basis = byId('split-basis');
+			if (basis) {
+				basis.textContent =
+					mode === 'federal' ? 'Average per shift · weekly OT applied' : 'Per shift';
+			}
+		};
+
+		const applyPreset = (preset) => {
+			byId('shift-rate').value = preset.hourlyRate;
+			byId('shift-hours').value = preset.totalShiftHours;
+			byId('shifts-week').value = preset.shiftsPerWeek;
+			byId('differential').value = preset.differential;
+			byId('sleep-toggle').checked = preset.sleepEnabled;
+			byId('sleep-hours').value = preset.sleepHours;
+			byId('meal-toggle').checked = preset.mealEnabled;
+			byId('meal-hours').value = preset.mealHours;
+
+			const modeInput = root.querySelector(
+				`input[name="pay-mode"][value="${preset.mode}"]`,
+			);
+			if (modeInput) modeInput.checked = true;
+
+			setPresetState(preset.id);
+			setRateState(preset.hourlyRate);
+			updateDeductionUI();
+			syncOutputs();
+			render();
+		};
+
+		root.querySelectorAll('[data-preset]').forEach((button) => {
+			button.addEventListener('click', () => {
+				const preset = SHIFT_PRESETS.find((item) => item.id === button.dataset.preset);
+				if (preset) applyPreset(preset);
+			});
+		});
+
+		root.querySelectorAll('[data-rate]').forEach((button) => {
+			button.addEventListener('click', () => {
+				const rate = Number(button.dataset.rate);
+				byId('shift-rate').value = rate;
+				clearPresetState();
+				setRateState(rate);
+				render();
+			});
+		});
+
+		['shift-rate', 'shift-hours', 'shifts-week', 'differential', 'sleep-hours', 'meal-hours'].forEach(
+			(id) => {
+				const input = byId(id);
+				if (!input) return;
+				input.addEventListener('input', () => {
+					clearPresetState();
+					render();
+				});
+			},
+		);
+
+		['sleep-toggle', 'meal-toggle'].forEach((id) => {
+			const input = byId(id);
+			if (!input) return;
+			input.addEventListener('change', () => {
+				clearPresetState();
+				updateDeductionUI();
+				render();
+			});
+		});
+
+		root.querySelectorAll('input[name="pay-mode"]').forEach((input) => {
+			input.addEventListener('change', () => {
+				clearPresetState();
+				render();
+			});
+		});
+
+		byId('shift-tax')?.addEventListener('change', render);
+
+		updateDeductionUI();
+		syncOutputs();
+		render();
+	}
+</script>
+
+<style>
+	.page-hero {
+		position: relative;
+		overflow: hidden;
+		padding: 72px 0 48px;
+		text-align: center;
+	}
+
+	.mesh {
+		position: absolute;
+		inset: -260px -10% auto;
+		height: 640px;
+		background:
+			radial-gradient(38% 55% at 18% 42%, rgba(0, 124, 240, 0.3), transparent 70%),
+			radial-gradient(32% 50% at 44% 20%, rgba(121, 40, 202, 0.24), transparent 72%),
+			radial-gradient(38% 55% at 70% 44%, rgba(255, 0, 128, 0.16), transparent 72%),
+			radial-gradient(30% 48% at 88% 22%, rgba(249, 203, 40, 0.22), transparent 72%);
+		filter: blur(36px);
+		pointer-events: none;
+		-webkit-mask-image: linear-gradient(to bottom, #000 40%, transparent 100%);
+		mask-image: linear-gradient(to bottom, #000 40%, transparent 100%);
+	}
+
+	.hero-inner {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.hero-inner h1 {
+		max-width: 900px;
+		margin: 20px 0 0;
+		font-size: clamp(36px, 6.5vw, 64px);
+		font-weight: 600;
+		line-height: 1;
+		letter-spacing: -2.8px;
+	}
+
+	.lede {
+		max-width: 680px;
+		margin: 18px 0 0;
+		font-size: 17px;
+		line-height: 27px;
+		color: var(--body);
+	}
+
+	.hero-tags {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 6px;
+		margin: 24px 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.hero-tags li {
+		padding: 5px 10px;
+		border: 1px solid var(--hairline);
+		border-radius: 100px;
+		background: rgba(255, 255, 255, 0.7);
+		font-size: 12px;
+		color: var(--body);
+	}
+
+	.calculator-section {
+		padding: 12px 0 96px;
+	}
+
+	.calc-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+		gap: 16px;
+		align-items: start;
+	}
+
+	.panel {
+		background: #ffffff;
+		border: 1px solid var(--hairline);
+		border-radius: 16px;
+	}
+
+	.controls {
+		display: flex;
+		flex-direction: column;
+		gap: 24px;
+		padding: 24px;
+	}
+
+	.panel-head {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	.panel-head h2 {
+		margin: 0;
+		font-size: 20px;
+		font-weight: 600;
+		letter-spacing: -0.4px;
+		line-height: 28px;
+	}
+
+	.hint {
+		margin: 0;
+		font-size: 12px;
+		line-height: 16px;
+		color: var(--mute);
+	}
+
+	.form-block {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+
+	.block-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+	}
+
+	.field {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		min-width: 0;
+	}
+
+	.field-label {
+		font-size: 14px;
+		font-weight: 500;
+		letter-spacing: -0.28px;
+		color: var(--ink);
+	}
+
+	.presets {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+	}
+
+	.preset {
+		appearance: none;
+		padding: 8px 12px;
+		border: 1px solid var(--hairline);
+		border-radius: 100px;
+		background: #ffffff;
+		font: inherit;
+		font-size: 12px;
+		line-height: 16px;
+		color: var(--body);
+		text-align: left;
+		cursor: pointer;
+		transition:
+			background 0.15s ease,
+			border-color 0.15s ease,
+			color 0.15s ease;
+	}
+
+	.preset:hover {
+		border-color: #d4d4d4;
+		color: var(--ink);
+	}
+
+	.preset[aria-pressed='true'] {
+		background: var(--ink);
+		border-color: var(--ink);
+		color: #ffffff;
+	}
+
+	.control {
+		display: flex;
+		align-items: center;
+		height: 40px;
+		background: #ffffff;
+		border: 1px solid var(--hairline);
+		border-radius: 6px;
+		transition:
+			border-color 0.15s ease,
+			box-shadow 0.15s ease;
+	}
+
+	.control:focus-within {
+		border-color: var(--ink);
+		box-shadow: 0 0 0 3px rgba(23, 23, 23, 0.08);
+	}
+
+	.control input {
+		width: 100%;
+		min-width: 0;
+		height: 100%;
+		border: 0;
+		background: transparent;
+		padding: 0 12px;
+		font: inherit;
+		font-size: 14px;
+		color: var(--ink);
+		outline: none;
+	}
+
+	.control-prefix input {
+		padding-left: 4px;
+	}
+
+	.control-prefix .affix {
+		padding: 0 0 0 12px;
+		font-size: 13px;
+		color: var(--mute);
+	}
+
+	.rate-presets {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+	}
+
+	.rate-pill {
+		appearance: none;
+		padding: 5px 10px;
+		border: 1px solid var(--hairline);
+		border-radius: 100px;
+		background: #ffffff;
+		font: inherit;
+		font-size: 12px;
+		font-weight: 500;
+		color: var(--body);
+		cursor: pointer;
+		transition:
+			background 0.15s ease,
+			border-color 0.15s ease,
+			color 0.15s ease;
+	}
+
+	.rate-pill:hover {
+		border-color: #d4d4d4;
+		color: var(--ink);
+	}
+
+	.rate-pill[aria-pressed='true'] {
+		background: var(--ink);
+		border-color: var(--ink);
+		color: #ffffff;
+	}
+
+	.slider-grid {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+
+	.slider-field {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.slider-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+	}
+
+	.slider-value {
+		padding: 3px 9px;
+		border: 1px solid var(--hairline);
+		border-radius: 100px;
+		background: var(--canvas);
+		font-family: var(--font-mono);
+		font-size: 12px;
+		font-weight: 500;
+		color: var(--ink);
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+	}
+
+	input[type='range'] {
+		width: 100%;
+		height: 20px;
+		margin: 0;
+		accent-color: var(--ink);
+		cursor: pointer;
+	}
+
+	input[type='range']:disabled {
+		cursor: not-allowed;
+		opacity: 0.4;
+	}
+
+	.range-labels {
+		display: flex;
+		justify-content: space-between;
+		font-size: 11px;
+		color: var(--faint);
+	}
+
+	.deduction {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		padding: 12px;
+		border: 1px solid var(--hairline);
+		border-radius: 10px;
+	}
+
+	.deduction-head {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 10px;
+	}
+
+	.switch-row {
+		display: grid;
+		grid-template-columns: auto 1fr;
+		gap: 10px;
+		align-items: start;
+		cursor: pointer;
+	}
+
+	.switch-row input {
+		position: absolute;
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	.switch {
+		position: relative;
+		width: 36px;
+		height: 20px;
+		margin-top: 2px;
+		border-radius: 100px;
+		background: #e3e3e3;
+		transition: background 0.15s ease;
+	}
+
+	.switch::after {
+		content: '';
+		position: absolute;
+		top: 2px;
+		left: 2px;
+		width: 16px;
+		height: 16px;
+		border-radius: 50%;
+		background: #ffffff;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+		transition: transform 0.15s ease;
+	}
+
+	.switch-row input:checked + .switch {
+		background: var(--ink);
+	}
+
+	.switch-row input:checked + .switch::after {
+		transform: translateX(16px);
+	}
+
+	.switch-row input:focus-visible + .switch {
+		box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.35);
+	}
+
+	.switch-copy {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	.switch-copy strong {
+		font-size: 13px;
+		font-weight: 500;
+		color: var(--ink);
+	}
+
+	.switch-copy small {
+		font-size: 12px;
+		line-height: 16px;
+		color: var(--mute);
+	}
+
+	.tip {
+		position: relative;
+		flex: none;
+	}
+
+	.tip summary {
+		display: grid;
+		place-items: center;
+		width: 18px;
+		height: 18px;
+		margin-top: 2px;
+		border: 1px solid var(--hairline);
+		border-radius: 50%;
+		font-family: var(--font-mono);
+		font-size: 10px;
+		color: var(--mute);
+		list-style: none;
+		cursor: pointer;
+	}
+
+	.tip summary::-webkit-details-marker {
+		display: none;
+	}
+
+	.tip summary:hover,
+	.tip[open] summary {
+		border-color: var(--ink);
+		color: var(--ink);
+	}
+
+	.tip-bubble {
+		position: absolute;
+		top: 26px;
+		right: 0;
+		z-index: 30;
+		width: 260px;
+		padding: 12px;
+		border: 1px solid var(--hairline);
+		border-radius: 8px;
+		background: #ffffff;
+		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+		font-size: 12px;
+		line-height: 17px;
+		color: var(--body);
+		text-align: left;
+	}
+
+	.tip-bubble strong {
+		display: block;
+		margin-bottom: 4px;
+		color: var(--ink);
+	}
+
+	.tip-bubble p {
+		margin: 0;
+	}
+
+	.deduction-slider {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		transition: opacity 0.15s ease;
+	}
+
+	.deduction-slider.is-disabled {
+		opacity: 0.4;
+	}
+
+	.deduction-value {
+		min-width: 52px;
+		font-size: 12px;
+		font-weight: 500;
+		color: var(--ink);
+		text-align: right;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.payable-badge {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+		padding: 12px 14px;
+		border: 1px dashed #d4d4d4;
+		border-radius: 8px;
+		background: var(--canvas);
+	}
+
+	.payable-badge .mono {
+		display: block;
+		margin-bottom: 2px;
+		color: var(--mute);
+	}
+
+	.payable-badge strong {
+		font-size: 24px;
+		font-weight: 600;
+		letter-spacing: -0.8px;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.payable-badge p {
+		margin: 0;
+		font-size: 12px;
+		line-height: 17px;
+		color: var(--mute);
+		text-align: right;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.mode-fieldset {
+		margin: 0;
+		padding: 0;
+		border: 0;
+	}
+
+	.mode-fieldset legend {
+		margin-bottom: 12px;
+		padding: 0;
+	}
+
+	.mode-grid {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	.mode-card {
+		position: relative;
+		cursor: pointer;
+	}
+
+	.mode-card input {
+		position: absolute;
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	.mode-body {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		padding: 10px 12px;
+		border: 1px solid var(--hairline);
+		border-radius: 8px;
+		transition:
+			border-color 0.15s ease,
+			background 0.15s ease,
+			box-shadow 0.15s ease;
+	}
+
+	.mode-body strong {
+		font-size: 13px;
+		font-weight: 500;
+		color: var(--ink);
+	}
+
+	.mode-body small {
+		font-size: 12px;
+		line-height: 16px;
+		color: var(--mute);
+	}
+
+	.mode-card input:checked + .mode-body {
+		border-color: var(--ink);
+		background: var(--canvas);
+		box-shadow: inset 0 0 0 1px var(--ink);
+	}
+
+	.mode-card input:focus-visible + .mode-body {
+		outline: 2px solid var(--link);
+		outline-offset: 2px;
+	}
+
+	.result-panel {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+		padding: 24px;
+	}
+
+	.result-head {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 12px;
+	}
+
+	.tax-select select {
+		appearance: none;
+		height: 32px;
+		max-width: 210px;
+		padding: 0 28px 0 10px;
+		border: 1px solid var(--hairline);
+		border-radius: 100px;
+		background: #ffffff
+			url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23171717' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+			no-repeat right 10px center;
+		font: inherit;
+		font-size: 12px;
+		font-weight: 500;
+		color: var(--ink);
+		cursor: pointer;
+	}
+
+	.tax-select select:focus-visible {
+		outline: 2px solid var(--link);
+		outline-offset: 2px;
+	}
+
+	.effective-note {
+		margin: -4px 0 0;
+		font-size: 12px;
+		line-height: 17px;
+		color: var(--mute);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.split-card {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		padding: 14px;
+		border: 1px solid var(--hairline);
+		border-radius: 10px;
+	}
+
+	.split-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+	}
+
+	.split-bar {
+		display: flex;
+		width: 100%;
+		height: 16px;
+		overflow: hidden;
+		border-radius: 4px;
+		background: var(--hairline-soft);
+	}
+
+	.seg {
+		height: 100%;
+		transition: width 0.2s ease;
+	}
+
+	.seg + .seg {
+		box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.45);
+	}
+
+	.seg-regular {
+		background: var(--ink);
+	}
+
+	.seg-overtime {
+		background: var(--link);
+	}
+
+	.seg-double {
+		background: #7928ca;
+	}
+
+	.seg-unpaid {
+		background: repeating-linear-gradient(
+			135deg,
+			#f2f2f2 0 4px,
+			#e4e4e4 4px 8px
+		);
+	}
+
+	.split-legend {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px 14px;
+		font-size: 12px;
+		color: var(--body);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.split-legend span {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+	}
+
+	.split-legend b {
+		color: var(--ink);
+		font-weight: 500;
+	}
+
+	.dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 2px;
+	}
+
+	.dot-regular {
+		background: var(--ink);
+	}
+
+	.dot-overtime {
+		background: var(--link);
+	}
+
+	.dot-double {
+		background: #7928ca;
+	}
+
+	.dot-unpaid {
+		border: 1px solid var(--hairline);
+		background: #f2f2f2;
+	}
+
+	.payout-hero {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		padding: 16px;
+		border: 1px solid var(--hairline);
+		border-radius: 12px;
+		background: var(--canvas);
+	}
+
+	.result-label {
+		font-size: 13px;
+		font-weight: 500;
+		color: var(--body);
+	}
+
+	.result-value {
+		font-size: clamp(38px, 5vw, 48px);
+		font-weight: 600;
+		line-height: 1.05;
+		letter-spacing: -2.2px;
+		color: var(--ink);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.result-sub {
+		font-size: 12px;
+		color: var(--mute);
+	}
+
+	.result-sub b {
+		color: var(--ink);
+		font-weight: 500;
+	}
+
+	.hero-breakdown {
+		display: flex;
+		flex-direction: column;
+		margin-top: 8px;
+		padding-top: 10px;
+		border-top: 1px solid var(--hairline);
+	}
+
+	.line {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 16px;
+		padding: 5px 0;
+		font-size: 12px;
+		color: var(--body);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.line em {
+		margin-left: 4px;
+		font-style: normal;
+		color: var(--faint);
+	}
+
+	.line b {
+		font-weight: 500;
+		color: var(--ink);
+	}
+
+	.mode-note {
+		margin: 8px 0 0;
+		padding-top: 10px;
+		border-top: 1px solid var(--hairline);
+		font-size: 11px;
+		line-height: 16px;
+		color: var(--mute);
+	}
+
+	.payout-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 8px;
+	}
+
+	.payout-card {
+		display: flex;
+		flex-direction: column;
+		gap: 3px;
+		padding: 12px;
+		border: 1px solid var(--hairline);
+		border-radius: 10px;
+	}
+
+	.payout-label {
+		font-size: 11px;
+		line-height: 16px;
+		color: var(--mute);
+	}
+
+	.payout-card strong {
+		font-size: 18px;
+		font-weight: 600;
+		letter-spacing: -0.4px;
+		color: var(--ink);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.payout-card small {
+		font-size: 11px;
+		color: var(--mute);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.payout-card small b {
+		font-weight: 500;
+		color: var(--body);
+	}
+
+	.result-disclaimer {
+		margin: 0;
+		padding-top: 14px;
+		border-top: 1px solid var(--hairline-soft);
+		font-size: 11px;
+		line-height: 16px;
+		color: var(--faint);
+	}
+
+	.content-section {
+		padding: 80px 0;
+		border-top: 1px solid var(--hairline);
+	}
+
+	.content-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) 320px;
+		gap: 56px;
+		align-items: start;
+	}
+
+	.prose {
+		max-width: 680px;
+	}
+
+	.prose .eyebrow,
+	.content-head .eyebrow {
+		color: var(--mute);
+	}
+
+	.prose h2,
+	.content-head h2 {
+		margin: 12px 0 0;
+		font-size: clamp(28px, 4vw, 38px);
+		font-weight: 600;
+		line-height: 1.1;
+		letter-spacing: -1.5px;
+	}
+
+	.prose h3 {
+		margin: 28px 0 0;
+		font-size: 17px;
+		font-weight: 600;
+		letter-spacing: -0.3px;
+	}
+
+	.prose p {
+		margin: 10px 0 0;
+		font-size: 15px;
+		line-height: 25px;
+		color: var(--body);
+	}
+
+	.formula-inline {
+		padding: 10px 12px;
+		border: 1px solid var(--hairline);
+		border-radius: 6px;
+		background: #ffffff;
+		font-family: var(--font-mono);
+		font-size: 12px !important;
+		color: var(--ink) !important;
+	}
+
+	.formula-card {
+		position: sticky;
+		top: 96px;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		padding: 20px;
+		border: 1px solid var(--hairline);
+		border-radius: 12px;
+		background: #ffffff;
+	}
+
+	.formula-card > .mono {
+		color: var(--mute);
+	}
+
+	.formula-row {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		padding-top: 12px;
+		border-top: 1px solid var(--hairline-soft);
+	}
+
+	.formula-row span {
+		font-size: 12px;
+		color: var(--mute);
+	}
+
+	.formula-row code {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		color: var(--ink);
+	}
+
+	.content-head {
+		max-width: 680px;
+	}
+
+	.content-head > p:last-child {
+		margin: 12px 0 0;
+		font-size: 15px;
+		line-height: 25px;
+		color: var(--body);
+	}
+
+	.rule-grid {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 12px;
+		margin-top: 32px;
+	}
+
+	.rule-card {
+		display: flex;
+		flex-direction: column;
+		padding: 20px;
+		border: 1px solid var(--hairline);
+		border-radius: 12px;
+		background: #ffffff;
+	}
+
+	.card-num {
+		color: var(--mute);
+	}
+
+	.rule-card h3 {
+		margin: 10px 0 0;
+		font-size: 17px;
+		font-weight: 600;
+		letter-spacing: -0.3px;
+	}
+
+	.rule-card p {
+		margin: 8px 0 0;
+		font-size: 13px;
+		line-height: 21px;
+		color: var(--body);
+	}
+
+	@media (max-width: 960px) {
+		.calc-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.content-grid {
+			grid-template-columns: 1fr;
+			gap: 32px;
+		}
+
+		.formula-card {
+			position: static;
+		}
+
+		.rule-grid {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	@media (max-width: 640px) {
+		.page-hero {
+			padding: 56px 0 36px;
+		}
+
+		.hero-inner h1 {
+			letter-spacing: -2px;
+		}
+
+		.lede {
+			font-size: 15px;
+			line-height: 24px;
+		}
+
+		.calculator-section {
+			padding-bottom: 72px;
+		}
+
+		.controls,
+		.result-panel {
+			padding: 20px;
+		}
+
+		.result-head {
+			flex-direction: column;
+		}
+
+		.tax-select,
+		.tax-select select {
+			width: 100%;
+			max-width: none;
+		}
+
+		.payable-badge {
+			align-items: flex-start;
+			flex-direction: column;
+			gap: 6px;
+		}
+
+		.payable-badge p {
+			text-align: left;
+		}
+
+		.payout-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.content-section {
+			padding: 64px 0;
+		}
+	}
+
+	@media (max-width: 420px) {
+		.tip-bubble {
+			width: 220px;
+		}
+
+		.presets {
+			flex-direction: column;
+		}
+
+		.preset {
+			width: 100%;
+		}
+	}
+</style>

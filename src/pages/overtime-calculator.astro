@@ -1,0 +1,1535 @@
+---
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import EditorialGuide from '../components/EditorialGuide.astro';
+import FaqSection from '../components/FaqSection.astro';
+import Layout from '../layouts/Layout.astro';
+import {
+	faqBiWeeklyVsSemiMonthly,
+	faqCaliforniaDailyOvertime,
+	faqCaregiverSleepMeals,
+	faqFica,
+	faqTakeHomeEstimate,
+} from '../data/faqs';
+import { calculateOvertime, TAX_SCENARIOS } from '../lib/payroll';
+import { webApplicationSchema } from '../lib/seo';
+
+const initialInput = {
+	hourlyRate: 20,
+	regularHours: 40,
+	overtimeHours: 10,
+	doubleTimeHours: 0,
+};
+
+const initial = calculateOvertime(initialInput);
+const initialTax = TAX_SCENARIOS.standard;
+const initialNet = initial.weeklyGross * (1 - initialTax.rate);
+const initialBiWeeklyNet = initial.biWeeklyGross * (1 - initialTax.rate);
+const initialSemiMonthlyNet = initial.semiMonthlyGross * (1 - initialTax.rate);
+const initialMonthlyNet = initial.monthlyGross * (1 - initialTax.rate);
+const initialAnnualNet = initial.annualGross * (1 - initialTax.rate);
+const initialTaxAmount = initial.weeklyGross * initialTax.rate;
+
+const money = (value: number) =>
+	value.toLocaleString('en-US', {
+		style: 'currency',
+		currency: 'USD',
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+	});
+
+const hoursText = (value: number) =>
+	value.toLocaleString('en-US', { maximumFractionDigits: 1 });
+
+const ratePresets = [15, 20, 25, 30, 35];
+const referenceRates = Array.from({ length: 26 }, (_, index) => 15 + index);
+
+const breadcrumbs = [
+	{ label: 'Home', href: '/' },
+	{ label: 'Overtime Calculator' },
+];
+
+const schema = webApplicationSchema({
+	name: 'Time and a Half & Double Time Overtime Calculator',
+	description:
+		'Calculate 1.5× time and a half and 2× double time pay, weekly overtime, bi-weekly and semi-monthly pay, and estimated take-home wages.',
+	path: '/overtime-calculator',
+});
+
+const faqs = [
+	{
+		question: 'How much is time and a half of $20 an hour?',
+		answer:
+			'Time and a half of $20 an hour is $30.00 per overtime hour, because $20 × 1.5 = $30. Double time is $40.00 per hour. Ten overtime hours at $30 produce $300 in overtime pay on top of the $800 earned for 40 regular hours, for $1,100 gross in that week.',
+	},
+	faqCaliforniaDailyOvertime,
+	faqBiWeeklyVsSemiMonthly,
+	faqFica,
+	faqCaregiverSleepMeals,
+	faqTakeHomeEstimate,
+];
+---
+
+<Layout
+	title="Time and a Half Calculator — 1.5x & 2x Overtime Pay | Nethourly"
+	description="Calculate time and a half instantly. Enter an hourly rate and overtime hours to see 1.5x and 2x rates, weekly overtime pay, and time-and-a-half rates for $15 to $40 per hour."
+	schema={schema}
+>
+	<Breadcrumbs items={breadcrumbs} />
+	<section class="page-hero">
+		<div class="mesh" aria-hidden="true"></div>
+		<div class="shell hero-inner">
+			<p class="eyebrow mono">Time and a half · FLSA overtime</p>
+			<h1>Time and a half calculator.</h1>
+			<p class="lede">
+				How much is 1.5× of $20 an hour? Enter your base rate and hours to see time-and-a-half
+				and double-time rates, weekly overtime pay, and bi-weekly, monthly, and annual totals.
+			</p>
+			<ul class="hero-tags" aria-label="Overtime calculator features">
+				<li>1.5× time and a half</li>
+				<li>2× double time</li>
+				<li>FLSA 40-hour week</li>
+				<li>Instant take-home estimate</li>
+			</ul>
+		</div>
+	</section>
+
+	<section class="calculator-section" id="calculator" aria-label="Time and a half calculator">
+		<div class="shell calc-grid">
+			<form id="ot-form" class="panel controls" novalidate>
+				<div class="panel-head">
+					<span class="mono">01 — Hours &amp; rate</span>
+					<h2>Your overtime inputs</h2>
+					<p class="hint">Regular hours plus overtime hours for one workweek.</p>
+				</div>
+
+				<div class="form-block">
+					<div class="field">
+						<span class="field-label">Base hourly rate</span>
+						<span class="control control-prefix">
+							<span class="affix" aria-hidden="true">$</span>
+							<input
+								id="ot-rate"
+								name="ot-rate"
+								type="number"
+								inputmode="decimal"
+								min="0"
+								max="10000"
+								step="0.01"
+								value={initialInput.hourlyRate}
+							/>
+						</span>
+					</div>
+					<div class="rate-presets" role="group" aria-label="Quick hourly rates">
+						{ratePresets.map((rate) => (
+							<button
+								type="button"
+								class="rate-pill"
+								data-rate={rate}
+								aria-pressed={rate === initialInput.hourlyRate ? 'true' : 'false'}
+							>
+								${rate}
+							</button>
+						))}
+					</div>
+				</div>
+
+				<div class="field-grid">
+					<label class="field">
+						<span class="field-label">Regular hours / week</span>
+						<span class="control control-suffix">
+							<input
+								id="ot-regular-hours"
+								name="ot-regular-hours"
+								type="number"
+								inputmode="decimal"
+								min="0"
+								max="168"
+								step="0.5"
+								value={initialInput.regularHours}
+							/>
+							<span class="affix" aria-hidden="true">hrs</span>
+						</span>
+					</label>
+					<label class="field">
+						<span class="field-label">Overtime hours at 1.5×</span>
+						<span class="control control-suffix">
+							<input
+								id="ot-overtime-hours"
+								name="ot-overtime-hours"
+								type="number"
+								inputmode="decimal"
+								min="0"
+								max="168"
+								step="0.5"
+								value={initialInput.overtimeHours}
+							/>
+							<span class="affix" aria-hidden="true">hrs</span>
+						</span>
+					</label>
+				</div>
+
+				<label class="field">
+					<span class="field-label">Double-time hours at 2.0×</span>
+					<span class="control control-suffix">
+						<input
+							id="ot-double-hours"
+							name="ot-double-hours"
+							type="number"
+							inputmode="decimal"
+							min="0"
+							max="168"
+							step="0.5"
+							value={initialInput.doubleTimeHours}
+						/>
+						<span class="affix" aria-hidden="true">hrs</span>
+					</span>
+					<span class="hint">Holiday hours or California shifts past 12 hours.</span>
+				</label>
+
+				<div class="flsa-note">
+					<span class="mono">FLSA check</span>
+					<p id="flsa-note">
+						Regular hours are paid at 1×, overtime at 1.5×, and double time at 2×. Federal
+						overtime generally begins after 40 hours in a workweek.
+					</p>
+				</div>
+			</form>
+
+			<div class="panel result-panel">
+				<div class="result-head">
+					<div class="panel-head">
+						<span class="mono">02 — Payout</span>
+						<h2>Overtime earnings</h2>
+					</div>
+					<label class="tax-select">
+						<span class="sr-only">Tax estimate</span>
+						<select id="ot-tax" name="ot-tax">
+							<option value="standard" selected>Net · Standard (18%)</option>
+							<option value="gross">Gross pay (0%)</option>
+							<option value="fica">Net · FICA only (7.65%)</option>
+							<option value="highTax">Net · High-tax state (24%)</option>
+							<option value="noIncomeTax">Net · No income tax (15%)</option>
+						</select>
+					</label>
+				</div>
+
+				<div class="rate-cards">
+					<div class="rate-card rate-card-primary">
+						<span>Time and a half · 1.5×</span>
+						<strong id="ot-rate-15">{money(initial.timeAndHalfRate)}</strong>
+						<small>per overtime hour</small>
+					</div>
+					<div class="rate-card">
+						<span>Double time · 2.0×</span>
+						<strong id="ot-rate-2">{money(initial.doubleTimeRate)}</strong>
+						<small>per double-time hour</small>
+					</div>
+				</div>
+
+				<div class="weekly-hero">
+					<span class="result-label">Total weekly gross</span>
+					<strong class="result-value" id="ot-weekly-gross">{money(initial.weeklyGross)}</strong>
+					<span class="result-sub">
+						Estimated net <b id="ot-net">{money(initialNet)}</b>
+						<span id="ot-tax-note">after 18%</span>
+					</span>
+
+					<div class="breakdown">
+						<div class="line">
+							<span>Regular pay <em id="ot-regular-hours-out">40 hrs × 1×</em></span>
+							<b id="ot-regular-pay">{money(initial.regularPay)}</b>
+						</div>
+						<div class="line">
+							<span>Overtime pay <em id="ot-overtime-hours-out">10 hrs × 1.5×</em></span>
+							<b id="ot-overtime-pay">{money(initial.overtimePay)}</b>
+						</div>
+						<div class="line">
+							<span>Double-time pay <em id="ot-double-hours-out">0 hrs × 2×</em></span>
+							<b id="ot-double-pay">{money(initial.doubleTimePay)}</b>
+						</div>
+						<div class="line line-tax">
+							<span>Estimated taxes</span>
+							<b id="ot-tax-amount">−{money(initialTaxAmount)}</b>
+						</div>
+						<div class="line line-net">
+							<span>Net weekly</span>
+							<b id="ot-net-weekly">{money(initialNet)}</b>
+						</div>
+					</div>
+				</div>
+
+				<div class="payout-grid">
+					<div class="payout-card">
+						<span class="payout-label">Bi-weekly · 26/yr</span>
+						<strong id="ot-biweekly">{money(initial.biWeeklyGross)}</strong>
+						<small>Net <b id="ot-biweekly-net">{money(initialBiWeeklyNet)}</b></small>
+					</div>
+					<div class="payout-card">
+						<span class="payout-label">Semi-monthly · 24/yr</span>
+						<strong id="ot-semimonthly">{money(initial.semiMonthlyGross)}</strong>
+						<small>Net <b id="ot-semimonthly-net">{money(initialSemiMonthlyNet)}</b></small>
+					</div>
+					<div class="payout-card">
+						<span class="payout-label">Monthly</span>
+						<strong id="ot-monthly">{money(initial.monthlyGross)}</strong>
+						<small>Net <b id="ot-monthly-net">{money(initialMonthlyNet)}</b></small>
+					</div>
+					<div class="payout-card">
+						<span class="payout-label">Annual · 52 weeks</span>
+						<strong id="ot-annual">{money(initial.annualGross)}</strong>
+						<small>Net <b id="ot-annual-net">{money(initialAnnualNet)}</b></small>
+					</div>
+				</div>
+
+				<p class="result-disclaimer">
+					Estimates only. Overtime eligibility and state rules vary. Tax scenarios are simplified
+					planning estimates, not withholding advice.
+				</p>
+			</div>
+		</div>
+	</section>
+
+	<section class="reference-section" aria-labelledby="reference-title">
+		<div class="shell">
+			<div class="panel reference-panel">
+				<div class="table-head">
+					<div>
+						<p class="eyebrow mono">Quick reference</p>
+						<h2 id="reference-title">Time and a half rates for common US wages</h2>
+					</div>
+					<p class="hint">
+						Common hourly rates from $15 to $40. Overtime rate = hourly rate × 1.5; double time =
+						hourly rate × 2.
+					</p>
+				</div>
+				<div class="table-scroll">
+					<table>
+						<caption class="sr-only">
+							Time and a half and double time rates for hourly wages from $15 to $40
+						</caption>
+						<thead>
+							<tr>
+								<th scope="col">Hourly wage</th>
+								<th scope="col" class="num">Time and a half · 1.5×</th>
+								<th scope="col" class="num">Double time · 2×</th>
+								<th scope="col" class="num">40-hr week</th>
+							</tr>
+						</thead>
+						<tbody>
+							{referenceRates.map((rate) => (
+								<tr>
+									<th scope="row">{money(rate)}</th>
+									<td class="num">{money(rate * 1.5)}</td>
+									<td class="num">{money(rate * 2)}</td>
+									<td class="num muted">{money(rate * 40)}</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<section class="content-section" id="how-it-works">
+		<div class="shell content-grid">
+			<div class="prose">
+				<p class="eyebrow mono">How it works</p>
+				<h2>How to calculate time and a half</h2>
+				<p>
+					Time and a half means 1.5 times the employee's regular hourly rate. It is the standard
+					FLSA overtime premium for hours worked beyond 40 in a workweek for most non-exempt
+					workers.
+				</p>
+
+				<h3>The formula</h3>
+				<p class="formula-inline">Time and a half rate = hourly rate × 1.5</p>
+				<p class="formula-inline">Overtime pay = overtime hours × hourly rate × 1.5</p>
+				<p>
+					At $20 per hour, the time-and-a-half rate is $30 per overtime hour. Ten overtime hours
+					produce $300 in overtime pay on top of regular wages.
+				</p>
+
+				<h3>Regular pay plus overtime pay</h3>
+				<p>
+					Total weekly pay is regular pay plus overtime pay plus any double-time pay. If the
+					employee works 40 regular hours and 10 overtime hours at $20 per hour, weekly gross is
+					$800 + $300 = $1,100 before taxes.
+				</p>
+
+				<h3>Double time and state rules</h3>
+				<p>
+					Double time is 2× the regular rate. Federal law does not require double time, but some
+					states — California in particular — require it for hours beyond 12 in a day or for
+					seventh consecutive workdays. Company policy or a union contract can also create
+					double-time pay.
+				</p>
+			</div>
+
+			<aside class="formula-card" aria-label="Overtime formulas">
+				<span class="mono">Quick formulas</span>
+				<div class="formula-row">
+					<span>Time and a half</span>
+					<code>rate × 1.5</code>
+				</div>
+				<div class="formula-row">
+					<span>Double time</span>
+					<code>rate × 2.0</code>
+				</div>
+				<div class="formula-row">
+					<span>Weekly gross</span>
+					<code>regular + OT + DT</code>
+				</div>
+				<div class="formula-row">
+					<span>Bi-weekly</span>
+					<code>weekly × 2</code>
+				</div>
+				<div class="formula-row">
+					<span>Annual</span>
+					<code>weekly × 52</code>
+				</div>
+			</aside>
+		</div>
+	</section>
+
+	<section class="content-section" id="overtime-rules">
+		<div class="shell">
+			<div class="content-head">
+				<p class="eyebrow mono">Rules</p>
+				<h2>When does overtime apply?</h2>
+				<p>
+					Overtime is a legal standard, not a job title. The key questions are the workweek, the
+					regular rate, and whether the worker is exempt.
+				</p>
+			</div>
+			<div class="rule-grid">
+				<article class="rule-card">
+					<span class="card-num mono">40 hours</span>
+					<h3>The FLSA workweek</h3>
+					<p>
+						Most non-exempt employees earn 1.5× for hours over 40 in a fixed, recurring 7-day
+						workweek. Daily overtime may apply under state law.
+					</p>
+				</article>
+				<article class="rule-card">
+					<span class="card-num mono">Regular rate</span>
+					<h3>More than base pay</h3>
+					<p>
+						The overtime rate is based on the regular rate, which can include non-discretionary
+						bonuses, shift differentials, and commissions — not just the hourly wage.
+					</p>
+				</article>
+				<article class="rule-card">
+					<span class="card-num mono">Exemptions</span>
+					<h3>Not everyone qualifies</h3>
+					<p>
+						Salaried executive, administrative, professional, and outside sales employees may be
+						exempt. Exempt status depends on duties and salary, not the paycheck type.
+					</p>
+				</article>
+			</div>
+		</div>
+	</section>
+
+	<EditorialGuide
+		id="overtime-guide"
+		eyebrow="Overtime field guide"
+		title="Overtime math that holds up on payday."
+		lede="Overtime is not a vibe. It is a formula: hours worked, regular rate, and the workweek. Most paycheck disputes come from one of those three being wrong."
+		toc={[
+			{ id: 'workweek-rule', label: 'The 40-hour rule' },
+			{ id: 'regular-rate', label: 'Differentials & bonuses' },
+			{ id: 'overtime-tax', label: 'The overtime tax myth' },
+		]}
+		asideNote="Federal rules are the floor. State and local rules can add daily overtime or higher thresholds."
+	>
+		<h3 id="workweek-rule">The 40-hour rule is a weekly test, not a two-week average</h3>
+		<p>
+			The FLSA workweek is a fixed, recurring period of 168 hours. It can start on any day
+			and at any time, but it has to be consistent. The employer cannot move the start of
+			the workweek around to avoid overtime, and it cannot average two weeks together to
+			make the overtime disappear.
+		</p>
+		<p>
+			Here is the version that shows up in real pay disputes. You work 50 hours in Week 1
+			and 30 hours in Week 2. The two-week total is 80, so someone in payroll says there is
+			no overtime. That is wrong. Week 1 has 10 hours over 40, and those 10 hours are paid
+			at 1.5×. Week 2 has no overtime because it is under 40. The second week does not erase
+			the first week's overtime.
+		</p>
+
+		<div class="editorial-example">
+			<div class="editorial-example-head">
+				<span class="mono">$20/hr, two weeks</span>
+				<strong>Weekly vs. averaged</strong>
+			</div>
+			<div class="editorial-example-row">
+				<span>Week 1: 40 × $20 + 10 × $30</span>
+				<span>$1,100.00</span>
+			</div>
+			<div class="editorial-example-row">
+				<span>Week 2: 30 × $20</span>
+				<span>$600.00</span>
+			</div>
+			<div class="editorial-example-row">
+				<span>Correct two-week pay</span>
+				<span>$1,700.00</span>
+			</div>
+			<div class="editorial-example-row">
+				<span>Averaged 80 hours at $20</span>
+				<span>$1,600.00</span>
+			</div>
+			<div class="editorial-example-row is-total">
+				<span>Underpayment from averaging</span>
+				<span>$100.00</span>
+			</div>
+		</div>
+
+		<p>
+			The $100 gap is not a rounding error. It is the 0.5× premium on 10 overtime hours. If
+			the same pattern repeats every two weeks, the annual underpayment is $2,600 before
+			taxes. That is real money for a warehouse, hospital, or restaurant worker.
+		</p>
+		<p>
+			There is one common exception: the hospital 8/80 rule. Under 29 U.S.C. § 207(j),
+			hospital employees may be on an 8/80 schedule, which pays overtime after eight hours
+			in a day or 80 hours in a 14-day period, not both. It requires a 14-day work period
+			and has to be adopted properly. It is not a general two-week averaging rule, and it
+			does not cover every hospital job.
+		</p>
+		<p>
+			A fixed workweek can start at any hour, but it has to stay consistent. If your shift
+			runs from 7 p.m. to 7 a.m., the workweek may start at 7 p.m. Sunday and end at 7 p.m.
+			the following Sunday. Hours worked after that boundary belong to the next week. If an
+			employer moves the boundary around to avoid overtime, ask for the change in writing
+			and ask why it changed.
+		</p>
+		<p>
+			Being salaried does not automatically make you exempt. The salary threshold and the
+			duties test both apply. A worker who is paid a salary but does not meet the duties
+			test may still be owed overtime for hours over 40. Misclassification is common in
+			assistant-manager and coordinator roles.
+		</p>
+
+		<div class="editorial-callout">
+			<span class="mono">The two-week average error</span>
+			<p>
+				If an employer says "it evens out over two weeks," ask which workweek the hours
+				fall in. Unless a specific 8/80 schedule applies, the 50-hour week owes 10 hours of
+				overtime no matter what the next week looks like.
+			</p>
+		</div>
+
+		<h3 id="regular-rate">Your $2 differential is part of your overtime rate</h3>
+		<p>
+			The FLSA regular rate is not just the hourly wage. It includes non-discretionary
+			bonuses, shift differentials, commissions, hazard pay, and other remuneration for
+			employment. Discretionary bonuses can be excluded. The regular rate is total
+			straight-time earnings divided by total hours worked, and the overtime premium is half
+			that rate for each overtime hour.
+		</p>
+		<p>
+			Take a $20 base rate and a $2 night differential for 45 hours. Straight-time earnings
+			are 45 × $22 = $990. The regular rate is $990 ÷ 45 = $22.00. The overtime premium is
+			0.5 × $22 × 5 = $55. Total pay is $1,045. If the employer paid 40 × $20 + 5 × $30 plus
+			45 × $2, the total is $1,040. The $5 difference is the premium on the differential.
+		</p>
+
+		<div class="editorial-example">
+			<div class="editorial-example-head">
+				<span class="mono">45 hours, $20 base + $2 night</span>
+				<strong>Regular rate method</strong>
+			</div>
+			<div class="editorial-example-row">
+				<span>Straight-time earnings: 45 × $22</span>
+				<span>$990.00</span>
+			</div>
+			<div class="editorial-example-row">
+				<span>Regular rate: $990 ÷ 45</span>
+				<span>$22.00/hr</span>
+			</div>
+			<div class="editorial-example-row">
+				<span>Overtime premium: 0.5 × $22 × 5</span>
+				<span>$55.00</span>
+			</div>
+			<div class="editorial-example-row is-total">
+				<span>Total pay</span>
+				<span>$1,045.00</span>
+			</div>
+		</div>
+
+		<p>
+			If the differential applies only to some hours, use a weighted average. Suppose 40
+			night hours are paid at $22 and five day overtime hours are paid at $20. Straight-time
+			earnings are $980, the regular rate is $21.78, and the overtime premium is about
+			$54.44. The exact number depends on which hours get the differential, so the payroll
+			department has to show its work.
+		</p>
+		<p>
+			Non-discretionary bonuses work the same way. A $100 attendance bonus for a 45-hour
+			week is added to straight-time earnings: $900 + $100 = $1,000. The regular rate is
+			$22.22, and the overtime premium is $55.56. If the employer ignores the bonus, the
+			overtime rate is too low. A true discretionary bonus, where the employer keeps control
+			and does not promise payment, can be excluded.
+		</p>
+		<p>
+			Commissions are included in the regular rate for the period they are earned, even when
+			they are paid later. If a commission is paid monthly but attributed to several
+			workweeks, the employer may need to recalculate overtime for those weeks. Retail,
+			sales, and service payrolls get this wrong more often than they should.
+		</p>
+
+		<div class="editorial-callout">
+			<span class="mono">Check the regular rate, not just the base</span>
+			<p>
+				If your stub says $30/hr overtime on a $20 base but you also earn a $2 differential,
+				the overtime rate should be based on $22, not $20. The difference is $2 per overtime
+				hour. Over 200 overtime hours a year, that is $400 before taxes.
+			</p>
+		</div>
+
+		<h3 id="overtime-tax">Overtime is not taxed at a higher rate</h3>
+		<p>
+			There is no federal overtime tax. Overtime is wages. It is subject to the same Social
+			Security, Medicare, and income tax as regular pay. The confusion comes from
+			withholding, not tax law. A bigger check can trigger a bigger withholding percentage,
+			and workers understandably read that as a special overtime tax.
+		</p>
+		<p>
+			Payroll software often annualizes a large check: it treats the check as if you earned
+			that amount every pay period, calculates withholding, then divides it back. A $1,500
+			check can have a higher withholding rate than a $1,000 check, even when the extra
+			hours are overtime. The IRS also allows a flat 22% supplemental wage withholding rate
+			for bonuses and supplemental wages up to $1 million, and many systems use the aggregate
+			method. Either way, the withholding is an estimate.
+		</p>
+		<p>
+			At tax time, your liability is based on annual taxable income, not on which hours were
+			labeled overtime. If payroll over-withheld, you get the difference back as a refund. If
+			it under-withheld, you write a check. The goal is to get close, not to avoid tax.
+		</p>
+		<p>
+			FICA does not care about overtime. Social Security is 6.2% and Medicare is 1.45% on
+			overtime wages just like regular wages. If you are a high earner, the Social Security
+			wage base cap can change the math late in the year, but that is a wage-base rule, not
+			an overtime rule. A few states have considered or enacted limited overtime deductions
+			or exemptions. Those are state income tax rules, not a federal overtime rate.
+		</p>
+		<p>
+			Progressive brackets also get blamed. Overtime can push some dollars into a higher
+			bracket, but only the dollars above the threshold are taxed at the higher rate. It does
+			not retroactively tax your regular hours. A $1,000 overtime check does not move your
+			entire year into the 22% bracket.
+		</p>
+		<p>
+			You can adjust withholding with a new W-4. If overtime is steady, add extra withholding
+			or reduce credits; if it is sporadic, do not over-adjust based on one check. The IRS
+			Tax Withholding Estimator is a better tool than guessing from a single stub. The point
+			is to match the year, not to win an argument with one paycheck.
+		</p>
+
+		<div class="editorial-callout">
+			<span class="mono">Compare year-to-date withholding</span>
+			<p>
+				If an overtime check looks heavily taxed, compare year-to-date tax withheld to
+				year-to-date gross. A single big check is a bad sample. The annual total is what
+				shows whether you are over-withheld or under-withheld.
+			</p>
+		</div>
+
+		<h4>How to check an overtime stub</h4>
+		<ul class="editorial-checklist">
+			<li>Confirm the workweek start date and which hours fall inside it.</li>
+			<li>Find the regular rate used for the 1.5× calculation, not just the base rate.</li>
+			<li>Add non-discretionary bonuses and differentials before checking the premium.</li>
+			<li>Compare year-to-date withholding with year-to-date gross, not one check.</li>
+		</ul>
+	</EditorialGuide>
+
+	<FaqSection
+		items={faqs}
+		eyebrow="Questions"
+		title="Time and a half FAQ"
+		description="1.5× and 2× rates, California daily overtime, pay periods, and FICA."
+		id="faq"
+	/>
+</Layout>
+
+<script>
+	import { calculateOvertime, TAX_SCENARIOS } from '../lib/payroll';
+
+	const root = document.getElementById('ot-form');
+	const resultPanel = document.querySelector('.result-panel');
+
+	if (root && resultPanel) {
+		const byId = (id) => document.getElementById(id);
+		const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+		const money = (value) =>
+			value.toLocaleString('en-US', {
+				style: 'currency',
+				currency: 'USD',
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 2,
+			});
+
+		const hours = (value) =>
+			value.toLocaleString('en-US', { maximumFractionDigits: 1 });
+
+		const readNumber = (id, fallback, min, max) => {
+			const input = byId(id);
+			const parsed = Number.parseFloat(input?.value ?? '');
+			if (!Number.isFinite(parsed)) return fallback;
+			return clamp(parsed, min, max);
+		};
+
+		const setRateState = (rate) => {
+			root.querySelectorAll('[data-rate]').forEach((button) => {
+				button.setAttribute(
+					'aria-pressed',
+					Math.abs(Number(button.dataset.rate) - rate) < 0.001 ? 'true' : 'false',
+				);
+			});
+		};
+
+		const render = () => {
+			const hourlyRate = readNumber('ot-rate', 20, 0, 10000);
+			const regularHours = readNumber('ot-regular-hours', 40, 0, 168);
+			const overtimeHours = readNumber('ot-overtime-hours', 10, 0, 168);
+			const doubleTimeHours = readNumber('ot-double-hours', 0, 0, 168);
+
+			const result = calculateOvertime({
+				hourlyRate,
+				regularHours,
+				overtimeHours,
+				doubleTimeHours,
+			});
+
+			const scenarioKey = byId('ot-tax')?.value ?? 'standard';
+			const taxRate = TAX_SCENARIOS[scenarioKey]?.rate ?? TAX_SCENARIOS.standard.rate;
+			const taxAmount = result.weeklyGross * taxRate;
+			const net = result.weeklyGross - taxAmount;
+			const biWeeklyNet = result.biWeeklyGross * (1 - taxRate);
+			const semiMonthlyNet = result.semiMonthlyGross * (1 - taxRate);
+			const monthlyNet = result.monthlyGross * (1 - taxRate);
+			const annualNet = result.annualGross * (1 - taxRate);
+
+			setRateState(hourlyRate);
+
+			byId('ot-rate-15').textContent = money(result.timeAndHalfRate);
+			byId('ot-rate-2').textContent = money(result.doubleTimeRate);
+			byId('ot-weekly-gross').textContent = money(result.weeklyGross);
+			byId('ot-net').textContent = money(net);
+			byId('ot-tax-note').textContent =
+				taxRate === 0 ? 'no taxes applied' : `after ${Math.round(taxRate * 10000) / 100}% estimated deductions`;
+
+			byId('ot-regular-hours-out').textContent = `${hours(regularHours)} hrs × 1×`;
+			byId('ot-regular-pay').textContent = money(result.regularPay);
+			byId('ot-overtime-hours-out').textContent = `${hours(overtimeHours)} hrs × 1.5×`;
+			byId('ot-overtime-pay').textContent = money(result.overtimePay);
+			byId('ot-double-hours-out').textContent = `${hours(doubleTimeHours)} hrs × 2×`;
+			byId('ot-double-pay').textContent = money(result.doubleTimePay);
+			byId('ot-tax-amount').textContent =
+				taxAmount === 0 ? money(0) : `−${money(taxAmount)}`;
+			byId('ot-net-weekly').textContent = money(net);
+
+			byId('ot-biweekly').textContent = money(result.biWeeklyGross);
+			byId('ot-biweekly-net').textContent = money(biWeeklyNet);
+			byId('ot-semimonthly').textContent = money(result.semiMonthlyGross);
+			byId('ot-semimonthly-net').textContent = money(semiMonthlyNet);
+			byId('ot-monthly').textContent = money(result.monthlyGross);
+			byId('ot-monthly-net').textContent = money(monthlyNet);
+			byId('ot-annual').textContent = money(result.annualGross);
+			byId('ot-annual-net').textContent = money(annualNet);
+
+			const flsaNote = byId('flsa-note');
+			if (flsaNote) {
+				const total = regularHours + overtimeHours + doubleTimeHours;
+				flsaNote.textContent =
+					total > 40
+						? `${hours(total)} total hours this week. Hours above 40 are overtime under federal FLSA rules — confirm that your 1.5× hours are at least the excess.`
+						: `${hours(total)} total hours this week. That is at or below 40, so federal weekly overtime may not apply unless a state daily rule does.`;
+			}
+		};
+
+		root.querySelectorAll('[data-rate]').forEach((button) => {
+			button.addEventListener('click', () => {
+				byId('ot-rate').value = Number(button.dataset.rate);
+				render();
+			});
+		});
+
+		['ot-rate', 'ot-regular-hours', 'ot-overtime-hours', 'ot-double-hours'].forEach((id) => {
+			const input = byId(id);
+			if (!input) return;
+			input.addEventListener('input', render);
+		});
+
+		byId('ot-tax')?.addEventListener('change', render);
+
+		render();
+	}
+</script>
+
+<style>
+	.page-hero {
+		position: relative;
+		overflow: hidden;
+		padding: 72px 0 48px;
+		text-align: center;
+	}
+
+	.mesh {
+		position: absolute;
+		inset: -260px -10% auto;
+		height: 640px;
+		background:
+			radial-gradient(38% 55% at 18% 42%, rgba(0, 124, 240, 0.3), transparent 70%),
+			radial-gradient(32% 50% at 44% 20%, rgba(121, 40, 202, 0.24), transparent 72%),
+			radial-gradient(38% 55% at 70% 44%, rgba(255, 0, 128, 0.16), transparent 72%),
+			radial-gradient(30% 48% at 88% 22%, rgba(249, 203, 40, 0.22), transparent 72%);
+		filter: blur(36px);
+		pointer-events: none;
+		-webkit-mask-image: linear-gradient(to bottom, #000 40%, transparent 100%);
+		mask-image: linear-gradient(to bottom, #000 40%, transparent 100%);
+	}
+
+	.hero-inner {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.hero-inner h1 {
+		max-width: 900px;
+		margin: 20px 0 0;
+		font-size: clamp(36px, 6.5vw, 64px);
+		font-weight: 600;
+		line-height: 1;
+		letter-spacing: -2.8px;
+	}
+
+	.lede {
+		max-width: 680px;
+		margin: 18px 0 0;
+		font-size: 17px;
+		line-height: 27px;
+		color: var(--body);
+	}
+
+	.hero-tags {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 6px;
+		margin: 24px 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.hero-tags li {
+		padding: 5px 10px;
+		border: 1px solid var(--hairline);
+		border-radius: 100px;
+		background: rgba(255, 255, 255, 0.7);
+		font-size: 12px;
+		color: var(--body);
+	}
+
+	.calculator-section {
+		padding: 12px 0 80px;
+	}
+
+	.calc-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+		gap: 16px;
+		align-items: start;
+	}
+
+	.panel {
+		background: #ffffff;
+		border: 1px solid var(--hairline);
+		border-radius: 16px;
+	}
+
+	.controls {
+		display: flex;
+		flex-direction: column;
+		gap: 24px;
+		padding: 24px;
+	}
+
+	.panel-head {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	.panel-head h2 {
+		margin: 0;
+		font-size: 20px;
+		font-weight: 600;
+		letter-spacing: -0.4px;
+		line-height: 28px;
+	}
+
+	.hint {
+		margin: 0;
+		font-size: 12px;
+		line-height: 16px;
+		color: var(--mute);
+	}
+
+	.form-block {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+
+	.field {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		min-width: 0;
+	}
+
+	.field-label {
+		font-size: 14px;
+		font-weight: 500;
+		letter-spacing: -0.28px;
+		color: var(--ink);
+	}
+
+	.field-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 12px;
+	}
+
+	.control {
+		display: flex;
+		align-items: center;
+		height: 40px;
+		background: #ffffff;
+		border: 1px solid var(--hairline);
+		border-radius: 6px;
+		transition:
+			border-color 0.15s ease,
+			box-shadow 0.15s ease;
+	}
+
+	.control:focus-within {
+		border-color: var(--ink);
+		box-shadow: 0 0 0 3px rgba(23, 23, 23, 0.08);
+	}
+
+	.control input {
+		width: 100%;
+		min-width: 0;
+		height: 100%;
+		border: 0;
+		background: transparent;
+		padding: 0 12px;
+		font: inherit;
+		font-size: 14px;
+		color: var(--ink);
+		outline: none;
+	}
+
+	.control-prefix input {
+		padding-left: 4px;
+	}
+
+	.control-suffix input {
+		padding-right: 4px;
+	}
+
+	.control-prefix .affix {
+		padding: 0 0 0 12px;
+		font-size: 13px;
+		color: var(--mute);
+	}
+
+	.control-suffix .affix {
+		padding: 0 12px 0 4px;
+		font-size: 13px;
+		color: var(--mute);
+	}
+
+	.rate-presets {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+	}
+
+	.rate-pill {
+		appearance: none;
+		padding: 5px 10px;
+		border: 1px solid var(--hairline);
+		border-radius: 100px;
+		background: #ffffff;
+		font: inherit;
+		font-size: 12px;
+		font-weight: 500;
+		color: var(--body);
+		cursor: pointer;
+		transition:
+			background 0.15s ease,
+			border-color 0.15s ease,
+			color 0.15s ease;
+	}
+
+	.rate-pill:hover {
+		border-color: #d4d4d4;
+		color: var(--ink);
+	}
+
+	.rate-pill[aria-pressed='true'] {
+		background: var(--ink);
+		border-color: var(--ink);
+		color: #ffffff;
+	}
+
+	.flsa-note {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		padding: 12px;
+		border: 1px dashed #d4d4d4;
+		border-radius: 8px;
+		background: var(--canvas);
+	}
+
+	.flsa-note .mono {
+		color: var(--mute);
+		font-size: 11px;
+	}
+
+	.flsa-note p {
+		margin: 0;
+		font-size: 12px;
+		line-height: 18px;
+		color: var(--body);
+	}
+
+	.result-panel {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+		padding: 24px;
+	}
+
+	.result-head {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 12px;
+	}
+
+	.tax-select select {
+		appearance: none;
+		height: 32px;
+		max-width: 210px;
+		padding: 0 28px 0 10px;
+		border: 1px solid var(--hairline);
+		border-radius: 100px;
+		background: #ffffff
+			url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23171717' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+			no-repeat right 10px center;
+		font: inherit;
+		font-size: 12px;
+		font-weight: 500;
+		color: var(--ink);
+		cursor: pointer;
+	}
+
+	.tax-select select:focus-visible {
+		outline: 2px solid var(--link);
+		outline-offset: 2px;
+	}
+
+	.rate-cards {
+		display: grid;
+		grid-template-columns: 1.15fr 0.85fr;
+		gap: 8px;
+	}
+
+	.rate-card {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		padding: 14px;
+		border: 1px solid var(--hairline);
+		border-radius: 12px;
+	}
+
+	.rate-card span {
+		font-size: 11px;
+		line-height: 16px;
+		color: var(--mute);
+	}
+
+	.rate-card strong {
+		font-size: 30px;
+		font-weight: 600;
+		line-height: 1.1;
+		letter-spacing: -1.2px;
+		color: var(--ink);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.rate-card small {
+		font-size: 11px;
+		color: var(--faint);
+	}
+
+	.rate-card-primary {
+		background: var(--ink);
+		border-color: var(--ink);
+	}
+
+	.rate-card-primary span,
+	.rate-card-primary small {
+		color: rgba(255, 255, 255, 0.62);
+	}
+
+	.rate-card-primary strong {
+		color: #ffffff;
+	}
+
+	.weekly-hero {
+		display: flex;
+		flex-direction: column;
+		gap: 5px;
+		padding: 16px;
+		border: 1px solid var(--hairline);
+		border-radius: 12px;
+		background: var(--canvas);
+	}
+
+	.result-label {
+		font-size: 13px;
+		font-weight: 500;
+		color: var(--body);
+	}
+
+	.result-value {
+		font-size: clamp(38px, 5vw, 48px);
+		font-weight: 600;
+		line-height: 1.05;
+		letter-spacing: -2.2px;
+		color: var(--ink);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.result-sub {
+		font-size: 12px;
+		color: var(--mute);
+	}
+
+	.result-sub b {
+		color: var(--ink);
+		font-weight: 500;
+	}
+
+	.breakdown {
+		display: flex;
+		flex-direction: column;
+		margin-top: 10px;
+		padding-top: 8px;
+		border-top: 1px solid var(--hairline);
+	}
+
+	.line {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 16px;
+		padding: 5px 0;
+		font-size: 12px;
+		color: var(--body);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.line em {
+		margin-left: 4px;
+		font-style: normal;
+		color: var(--faint);
+	}
+
+	.line b {
+		font-weight: 500;
+		color: var(--ink);
+	}
+
+	.line-tax {
+		margin-top: 6px;
+		padding-top: 10px;
+		border-top: 1px solid var(--hairline);
+	}
+
+	.line-net {
+		margin-top: 4px;
+		padding: 8px 10px;
+		border-radius: 6px;
+		background: #ffffff;
+		font-weight: 500;
+	}
+
+	.payout-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 8px;
+	}
+
+	.payout-card {
+		display: flex;
+		flex-direction: column;
+		gap: 3px;
+		padding: 12px;
+		border: 1px solid var(--hairline);
+		border-radius: 10px;
+	}
+
+	.payout-label {
+		font-size: 11px;
+		line-height: 16px;
+		color: var(--mute);
+	}
+
+	.payout-card strong {
+		font-size: 18px;
+		font-weight: 600;
+		letter-spacing: -0.4px;
+		color: var(--ink);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.payout-card small {
+		font-size: 11px;
+		color: var(--mute);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.payout-card small b {
+		font-weight: 500;
+		color: var(--body);
+	}
+
+	.result-disclaimer {
+		margin: 0;
+		padding-top: 14px;
+		border-top: 1px solid var(--hairline-soft);
+		font-size: 11px;
+		line-height: 16px;
+		color: var(--faint);
+	}
+
+	.reference-section {
+		padding: 0 0 80px;
+	}
+
+	.reference-panel {
+		padding: 24px;
+	}
+
+	.table-head {
+		display: flex;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 24px;
+		margin-bottom: 16px;
+	}
+
+	.table-head .eyebrow {
+		color: var(--mute);
+	}
+
+	.table-head h2 {
+		margin: 10px 0 0;
+		font-size: clamp(22px, 3vw, 30px);
+		font-weight: 600;
+		letter-spacing: -1px;
+		line-height: 1.15;
+	}
+
+	.table-head .hint {
+		max-width: 360px;
+		text-align: right;
+	}
+
+	.table-scroll {
+		overflow-x: auto;
+	}
+
+	table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 13px;
+		font-variant-numeric: tabular-nums;
+	}
+
+	thead th {
+		padding: 10px 12px;
+		border-bottom: 1px solid var(--hairline);
+		text-align: left;
+		font-size: 11px;
+		font-weight: 500;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--mute);
+		white-space: nowrap;
+	}
+
+	tbody th,
+	tbody td {
+		padding: 9px 12px;
+		border-bottom: 1px solid var(--hairline-soft);
+		white-space: nowrap;
+	}
+
+	tbody th {
+		text-align: left;
+		font-weight: 500;
+		color: var(--ink);
+	}
+
+	tbody td {
+		color: var(--body);
+	}
+
+	tbody tr:last-child th,
+	tbody tr:last-child td {
+		border-bottom: 0;
+	}
+
+	tbody tr:hover th,
+	tbody tr:hover td {
+		background: var(--canvas);
+	}
+
+	.num {
+		text-align: right;
+	}
+
+	.muted {
+		color: var(--mute);
+	}
+
+	.content-section {
+		padding: 80px 0;
+		border-top: 1px solid var(--hairline);
+	}
+
+	.content-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) 320px;
+		gap: 56px;
+		align-items: start;
+	}
+
+	.prose {
+		max-width: 680px;
+	}
+
+	.prose .eyebrow,
+	.content-head .eyebrow {
+		color: var(--mute);
+	}
+
+	.prose h2,
+	.content-head h2 {
+		margin: 12px 0 0;
+		font-size: clamp(28px, 4vw, 38px);
+		font-weight: 600;
+		line-height: 1.1;
+		letter-spacing: -1.5px;
+	}
+
+	.prose h3 {
+		margin: 26px 0 0;
+		font-size: 17px;
+		font-weight: 600;
+		letter-spacing: -0.3px;
+	}
+
+	.prose p {
+		margin: 10px 0 0;
+		font-size: 15px;
+		line-height: 25px;
+		color: var(--body);
+	}
+
+	.formula-inline {
+		padding: 10px 12px;
+		border: 1px solid var(--hairline);
+		border-radius: 6px;
+		background: #ffffff;
+		font-family: var(--font-mono);
+		font-size: 12px !important;
+		color: var(--ink) !important;
+	}
+
+	.formula-card {
+		position: sticky;
+		top: 96px;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		padding: 20px;
+		border: 1px solid var(--hairline);
+		border-radius: 12px;
+		background: #ffffff;
+	}
+
+	.formula-card > .mono {
+		color: var(--mute);
+	}
+
+	.formula-row {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		padding-top: 12px;
+		border-top: 1px solid var(--hairline-soft);
+	}
+
+	.formula-row span {
+		font-size: 12px;
+		color: var(--mute);
+	}
+
+	.formula-row code {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		color: var(--ink);
+	}
+
+	.content-head {
+		max-width: 680px;
+	}
+
+	.content-head > p:last-child {
+		margin: 12px 0 0;
+		font-size: 15px;
+		line-height: 25px;
+		color: var(--body);
+	}
+
+	.rule-grid {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 12px;
+		margin-top: 32px;
+	}
+
+	.rule-card {
+		display: flex;
+		flex-direction: column;
+		padding: 20px;
+		border: 1px solid var(--hairline);
+		border-radius: 12px;
+		background: #ffffff;
+	}
+
+	.card-num {
+		color: var(--mute);
+	}
+
+	.rule-card h3 {
+		margin: 10px 0 0;
+		font-size: 17px;
+		font-weight: 600;
+		letter-spacing: -0.3px;
+	}
+
+	.rule-card p {
+		margin: 8px 0 0;
+		font-size: 13px;
+		line-height: 21px;
+		color: var(--body);
+	}
+
+	@media (max-width: 960px) {
+		.calc-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.content-grid {
+			grid-template-columns: 1fr;
+			gap: 32px;
+		}
+
+		.formula-card {
+			position: static;
+		}
+
+		.rule-grid {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	@media (max-width: 640px) {
+		.page-hero {
+			padding: 56px 0 36px;
+		}
+
+		.hero-inner h1 {
+			letter-spacing: -2px;
+		}
+
+		.lede {
+			font-size: 15px;
+			line-height: 24px;
+		}
+
+		.calculator-section {
+			padding-bottom: 64px;
+		}
+
+		.controls,
+		.result-panel,
+		.reference-panel {
+			padding: 20px;
+		}
+
+		.result-head {
+			flex-direction: column;
+		}
+
+		.tax-select,
+		.tax-select select {
+			width: 100%;
+			max-width: none;
+		}
+
+		.rate-cards {
+			grid-template-columns: 1fr;
+		}
+
+		.field-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.payout-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.table-head {
+			align-items: flex-start;
+			flex-direction: column;
+			gap: 8px;
+		}
+
+		.table-head .hint {
+			text-align: left;
+		}
+
+		.content-section {
+			padding: 64px 0;
+		}
+	}
+</style>

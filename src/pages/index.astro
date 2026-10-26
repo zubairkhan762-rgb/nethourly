@@ -1,0 +1,648 @@
+---
+import Calculator from '../components/Calculator.astro';
+import EditorialGuide from '../components/EditorialGuide.astro';
+import FaqSection from '../components/FaqSection.astro';
+import Layout from '../layouts/Layout.astro';
+import { CORE_PAYROLL_FAQS } from '../data/faqs';
+import { POPULAR_WAGES, WAGES, formatUSD, getWageStats } from '../data/wages';
+import { webApplicationSchema } from '../lib/seo';
+
+const money = (value: number) => formatUSD(value, 0);
+
+const schema = webApplicationSchema({
+	name: 'NetHourly Hourly Pay & Take-Home Calculator',
+	description:
+		'Convert an hourly rate into weekly, bi-weekly, semi-monthly, monthly, and annual gross and net pay with FLSA overtime and 24-hour shift rules.',
+	path: '/',
+});
+---
+
+<Layout
+	title="NetHourly — Hourly to Salary, Take-Home Pay & Overtime Calculator"
+	description="Convert an hourly rate into weekly, bi-weekly, semi-monthly, monthly, and annual pay. Add FLSA overtime, 24-hour shift deductions, and estimated US take-home pay."
+	schema={schema}
+>
+	<section class="hero">
+			<div class="mesh" aria-hidden="true"></div>
+			<div class="shell hero-inner">
+				<p class="eyebrow mono">US payroll · FLSA · 2026</p>
+				<h1>Know your real hourly net.</h1>
+				<p class="lede">
+					One calculator for hourly, daily, weekly, bi-weekly, semi-monthly, and annual pay —
+					with FLSA overtime, 24-hour shift deductions, and US take-home estimates.
+				</p>
+				<div class="hero-actions">
+					<a class="button button-primary" href="#calculator-band">Calculate my pay</a>
+					<a class="button button-secondary" href="#how-it-works">See the rules</a>
+				</div>
+				<ul class="hero-meta">
+					<li><span>52</span> week baseline</li>
+					<li><span>1.5× / 2×</span> overtime</li>
+					<li><span>7.65%</span> FICA</li>
+					<li><span>24</span> semi-monthly periods</li>
+				</ul>
+			</div>
+		</section>
+
+		<section class="calculator-band" id="calculator-band" aria-label="Pay calculator">
+			<div class="shell">
+				<Calculator />
+			</div>
+		</section>
+
+		<section class="section" id="how-it-works">
+			<div class="shell">
+				<div class="section-head">
+					<p class="eyebrow mono">The rules</p>
+					<h2>Built on US payroll standards.</h2>
+					<p>
+						Every figure uses a 52-week year and FLSA conventions. Change any input and the
+						frequency table recalculates instantly.
+					</p>
+				</div>
+				<div class="card-grid">
+					<article class="card">
+						<span class="card-num mono">01 — Frequency</span>
+						<h3>Every pay period</h3>
+						<p>
+							Annual gross is the anchor. Bi-weekly divides by 26, semi-monthly by 24, and
+							monthly by 12 — they are not the same paycheck.
+						</p>
+						<code>Annual ÷ 26 · ÷ 24 · ÷ 12</code>
+					</article>
+					<article class="card">
+						<span class="card-num mono">02 — Overtime</span>
+						<h3>FLSA time and a half</h3>
+						<p>
+							Hours past 40 in a workweek earn 1.5×. Holiday hours and California shifts past
+							12 can be paid at 2×.
+						</p>
+						<code>40 × rate + OT × 1.5</code>
+					</article>
+					<article class="card">
+						<span class="card-num mono">03 — 24-hour shift</span>
+						<h3>Sleep and meal exclusions</h3>
+						<p>
+							Up to 8 sleep hours and 3 duty-free meal hours can be excluded. Daily overtime
+							splits at 8 and 12 payable hours.
+						</p>
+						<code>24 − sleep − meals = payable</code>
+					</article>
+					<article class="card">
+						<span class="card-num mono">04 — Take-home</span>
+						<h3>Fast tax estimates</h3>
+						<p>
+							FICA is fixed at 7.65%. Compare a standard 18% estimate, high-tax 24%, or
+							no-income-tax 15% scenario.
+						</p>
+						<code>FICA 6.2% + Medicare 1.45%</code>
+					</article>
+				</div>
+			</div>
+		</section>
+
+		<EditorialGuide
+			id="paycheck-guide"
+			eyebrow="Paycheck mechanics"
+			title="Why your paycheck is smaller than the math in your head."
+			lede="A $22 hourly rate sounds simple until the stub arrives. Here is where the money goes, why bi-weekly and semi-monthly checks never match, and how unpaid weeks quietly change your real rate."
+			toc={[
+				{ id: 'biweekly-trap', label: '26 vs. 24 checks' },
+				{ id: 'paycheck-autopsy', label: '$22/hr autopsy' },
+				{ id: 'unpaid-weeks', label: 'Unpaid weeks' },
+				{ id: 'salary-vs-hourly', label: 'Salary vs. hourly' },
+			]}
+			asideNote="All figures are planning estimates. Your pay stub controls."
+		>
+			<h3 id="biweekly-trap">26 checks is not 24 checks with extra money</h3>
+			<p>
+				If you multiply 40 hours by $22 by 52 weeks, you get $45,760. Divide that by 12
+				and you expect $3,813 a month. Then the first bi-weekly check lands at $1,760, and
+				the math feels wrong. It is not wrong. It is a timing problem.
+			</p>
+			<p>
+				Bi-weekly means every 14 days, which produces 26 checks. Semi-monthly means twice a
+				month, usually the 1st and 15th, which produces 24 checks. Annual pay is identical.
+				A semi-monthly check is $1,906.67; a bi-weekly check is $1,760. The semi-monthly
+				check is $146.67 larger, but you get two fewer of them.
+			</p>
+			<p>
+				The two extra bi-weekly checks are not a bonus. They are the 25th and 26th slices
+				of the same annual pie. Most months you get two checks; twice a year you get three.
+				If you budget $3,813 a month and only two checks arrive, you are short. Budget on
+				two checks, and treat the third as a buffer.
+			</p>
+
+			<div class="editorial-example">
+				<div class="editorial-example-head">
+					<span class="mono">The same $45,760, two schedules</span>
+					<strong>Timing changes the check</strong>
+				</div>
+				<div class="editorial-example-row">
+					<span>Annual gross at $22/hr</span>
+					<span>$45,760.00</span>
+				</div>
+				<div class="editorial-example-row">
+					<span>Bi-weekly: 26 checks of $1,760</span>
+					<span>$45,760.00</span>
+				</div>
+				<div class="editorial-example-row">
+					<span>Semi-monthly: 24 checks of $1,906.67</span>
+					<span>$45,760.00</span>
+				</div>
+				<div class="editorial-example-row">
+					<span>Monthly budget from two bi-weekly checks</span>
+					<span>$3,520.00</span>
+				</div>
+				<div class="editorial-example-row is-total">
+					<span>Third-check months per year</span>
+					<span>2</span>
+				</div>
+			</div>
+
+			<div class="editorial-callout">
+				<span class="mono">The three-paycheck month</span>
+				<p>
+					On a Friday bi-weekly schedule, the extra checks usually land in months with five
+					Fridays. Do not plan a vacation around it until you check your employer's pay
+					calendar. Holiday shifts can move a deposit into the prior month, and a new hire's
+					first check may be prorated.
+				</p>
+			</div>
+
+			<p>
+				The same timing applies to net pay, but the gap is bigger after taxes. A bi-weekly
+				worker who budgets on gross monthly income will feel rich in March and broke in
+				April. Build the budget from the smaller, more frequent check. Move the third check
+				into a separate account for car repairs, medical bills, or the weeks you lose hours.
+			</p>
+
+			<h3 id="paycheck-autopsy">A $22/hr bi-weekly paycheck, line by line</h3>
+			<p>
+				Take a $22/hr worker with 80 hours in a bi-weekly period. Gross pay is $1,760.
+				Here is a realistic stub, not a worst-case disaster. The assumptions: single filer,
+				standard deduction, 5% traditional 401(k), a $75 health premium through a Section
+				125 plan, and no other income.
+			</p>
+
+			<div class="editorial-table">
+				<table>
+					<caption class="sr-only">Example bi-weekly paycheck deductions at $22 an hour</caption>
+					<thead>
+						<tr>
+							<th scope="col">Line</th>
+							<th scope="col">Amount</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr><td>Gross pay (80 hours × $22)</td><td><strong>$1,760.00</strong></td></tr>
+						<tr><td>Traditional 401(k), 5%</td><td>−$88.00</td></tr>
+						<tr><td>Health premium</td><td>−$75.00</td></tr>
+						<tr><td>Social Security, 6.2% of $1,685</td><td>−$104.47</td></tr>
+						<tr><td>Medicare, 1.45% of $1,685</td><td>−$24.43</td></tr>
+						<tr><td>Federal income tax withholding</td><td>−$113.24</td></tr>
+						<tr><td>State income tax: Texas or Florida</td><td>$0.00</td></tr>
+						<tr><td>State income tax: California, plus SDI</td><td>−$53.00</td></tr>
+						<tr><td>State income tax: New York</td><td>−$45.00</td></tr>
+						<tr><td><strong>Net in Texas or Florida</strong></td><td><strong>≈$1,355</strong></td></tr>
+						<tr><td><strong>Net in California</strong></td><td><strong>≈$1,302</strong></td></tr>
+						<tr><td><strong>Net in New York</strong></td><td><strong>≈$1,310</strong></td></tr>
+					</tbody>
+				</table>
+			</div>
+			<p class="editorial-footnote">
+				Rounded for illustration. State and local rates vary. Use the calculator's tax
+				scenario selector for a faster comparison.
+			</p>
+
+			<p>
+				Social Security is 6.2% and Medicare is 1.45%, for 7.65% total. If your health
+				premium runs through a Section 125 cafeteria plan, it comes out before FICA. A
+				traditional 401(k) does not. That is why the FICA line is calculated on $1,685, not
+				$1,760. A few dollars of plan design can move the line, so ask payroll for the
+				taxable wage base if your stub looks different.
+			</p>
+			<p>
+				Federal income tax is not a flat 12%. A single filer's standard deduction is roughly
+				$15,000–$16,000. The first roughly $12,000 of taxable income is taxed at 10%, and the
+				next chunk at 12%. Annualized, this check produces about $41,522 of taxable wages.
+				That lands in the 12% bracket, but not all of it is taxed at 12%. The withholding
+				table gives about $113 per check. Bonuses, a second job, dependents, and credits all
+				move that number.
+			</p>
+			<p>
+				State tax is where the same job feels different. Texas and Florida have no state
+				income tax. California has a graduated income tax plus State Disability Insurance.
+				New York has a state tax and, in New York City, a local tax. At this income, the
+				state line is usually tens of dollars per check, not hundreds. But it is real, and
+				it compounds across the year.
+			</p>
+			<p>
+				The 401(k) and health premium lower taxable income, but they also lower cash. That
+				is the trade. A 5% contribution here is $88 per check, or $2,288 a year before any
+				employer match. If 5% is too much, start at 1% or 3% and get the full match. Do not
+				leave free money on the table while you build the habit.
+			</p>
+
+			<div class="editorial-callout">
+				<span class="mono">Why the calculator says $1,443</span>
+				<p>
+					The standard 18% shortcut subtracts $316.80 from $1,760 and leaves $1,443.20.
+					That number is useful for comparing job offers. It is not a pay stub. A real
+					check with a 401(k) and health premium can land near $1,300 to $1,355, depending
+					on state and benefits.
+				</p>
+			</div>
+
+			<h3 id="unpaid-weeks">The 52-week illusion</h3>
+			<p>
+				Annual gross assumes 52 paid weeks. Most hourly workers do not get 52 paid weeks.
+				Two weeks of unpaid sick or vacation time drops annual pay from $45,760 to $44,000.
+				That is $1,760, or 3.85%. The hourly rate did not change, but the annual number
+				did.
+			</p>
+			<p>
+				Budget on 50 weeks, not 52. If you know you take two weeks off, set aside $1,760
+				across the year, or $67.69 per bi-weekly check. That is the real cost of unpaid
+				time. It is also the reason a $22/hr offer can feel like a $21.15/hr offer by the
+				time the year ends.
+			</p>
+			<p>
+				True effective hourly rate is actual annual pay divided by actual hours worked. If
+				you take two weeks unpaid and also work five unpaid hours a week on shift handoff,
+				charting, or training, you work 2,250 hours for $44,000. That is $19.56/hr, not
+				$22. The unpaid hours are the part people forget.
+			</p>
+			<p>
+				Paid vacation is different. If you are paid for 52 weeks but only work 50, your
+				effective rate on hours actually worked is higher, about $22.88. The problem is
+				unpaid time, not time off. Do not count your commute; do count required pre-shift
+				meetings and off-clock work.
+			</p>
+
+			<div class="editorial-callout">
+				<span class="mono">Run the real denominator</span>
+				<p>
+					Add up every hour you are required to be at work or on call, including unpaid
+					pre-shift meetings and off-clock charting. Divide actual annual pay by that
+					number. If the result is below the rate you thought you accepted, you have a
+					negotiation point or a boundary problem.
+				</p>
+			</div>
+
+			<h3 id="salary-vs-hourly">When a salary promotion costs you money</h3>
+			<p>
+				A salary is not automatically a raise. It is a different pay formula, and sometimes
+				a worse one. The federal salary threshold for the white-collar exemption is $684
+				per week, or $35,568 per year. That is the floor, not the whole test. The job must
+				also pass the duties test. Some states set a higher salary floor. If the offer is
+				below the threshold, the worker is generally non-exempt and owed overtime, even if
+				paid a salary.
+			</p>
+			<p>
+				Run the hours. A $58,000 salary at 50 hours a week for 52 weeks is 2,600 hours, or
+				$22.31/hr. The same worker at $22/hr with 10 hours of overtime per week earns 40 ×
+				$22 plus 10 × $33, or $1,210 a week. That is $62,920 a year. The hourly job pays
+				$4,920 more than the salary, and it pays for the extra 10 hours.
+			</p>
+			<p>
+				If the salary is $65,000, the effective rate is $25/hr, and the math changes. The
+				point is not that salary is bad. The point is that you have to divide by the hours
+				the job actually takes. Ask about the schedule, on-call, weekends, busy season, and
+				whether the role is exempt. A $60,000 exempt job that averages 55 hours is $20.98/hr.
+			</p>
+			<p>
+				Benefits matter: health insurance, 401(k) match, paid time off, tuition help, and
+				schedule flexibility can close the gap. Put a dollar value on them and compare total
+				compensation. Do not let a benefits story hide a pay cut. The offer letter is not
+				the paycheck. The paycheck is hours times rate, plus overtime, minus deductions.
+			</p>
+
+			<div class="editorial-callout">
+				<span class="mono">The 10-minute offer check</span>
+				<p>
+					Divide the salary by the hours the job really takes, not the hours on the job
+					description. Then compare that effective rate with your current hourly rate plus
+					the overtime you actually work. If the new number is lower, the promotion is a
+					pay cut with a nicer title.
+				</p>
+			</div>
+		</EditorialGuide>
+
+		<FaqSection
+			id="faq"
+			items={CORE_PAYROLL_FAQS}
+			eyebrow="Questions"
+			title="Pay rules, plainly."
+			description="Bi-weekly vs. semi-monthly, FLSA sleep rules, California overtime, and FICA — answered."
+		/>
+		<section class="section" id="popular-wages">
+			<div class="shell">
+				<div class="section-head">
+					<p class="eyebrow mono">Popular hourly searches</p>
+					<h2>What does an hourly rate really pay?</h2>
+					<p>
+						Jump straight to a rate. Every guide shows annual gross, bi-weekly pay,
+						take-home estimates, overtime premiums, and a calculator pre-filled for that
+						wage.
+					</p>
+				</div>
+				<div class="popular-grid">
+					{POPULAR_WAGES.map((wage) => {
+						const stats = getWageStats(wage.rate);
+						return (
+							<a class="popular-card" href={`/wage/${wage.slug}`}>
+								<span class="popular-rate">{wage.display}<span>/hr</span></span>
+								<span class="popular-annual">{money(stats.annual)} / year</span>
+								<span class="popular-biweekly">{money(stats.biWeekly)} bi-weekly</span>
+							</a>
+						);
+					})}
+				</div>
+				<div class="popular-more">
+					<a class="button button-secondary" href="/popular-wages">
+						Browse all {WAGES.length} wage guides
+					</a>
+				</div>
+			</div>
+		</section>
+	</Layout>
+
+<style>
+	.hero {
+		position: relative;
+		overflow: hidden;
+		padding: 96px 0 72px;
+		text-align: center;
+	}
+
+	.mesh {
+		position: absolute;
+		inset: -220px -10% auto;
+		height: 700px;
+		background:
+			radial-gradient(38% 55% at 18% 42%, rgba(0, 124, 240, 0.34), transparent 70%),
+			radial-gradient(32% 50% at 42% 20%, rgba(121, 40, 202, 0.26), transparent 72%),
+			radial-gradient(38% 55% at 68% 44%, rgba(255, 0, 128, 0.18), transparent 72%),
+			radial-gradient(30% 48% at 88% 22%, rgba(249, 203, 40, 0.24), transparent 72%);
+		filter: blur(36px);
+		pointer-events: none;
+		-webkit-mask-image: linear-gradient(to bottom, #000 40%, transparent 100%);
+		mask-image: linear-gradient(to bottom, #000 40%, transparent 100%);
+	}
+
+	.hero-inner {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.hero h1 {
+		max-width: 900px;
+		margin: 20px 0 0;
+		font-size: clamp(40px, 7vw, 72px);
+		font-weight: 600;
+		line-height: 0.98;
+		letter-spacing: -3px;
+	}
+
+	.lede {
+		max-width: 620px;
+		margin: 20px 0 0;
+		font-size: 18px;
+		line-height: 28px;
+		color: var(--body);
+	}
+
+	.hero-actions {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 8px;
+		margin-top: 28px;
+	}
+
+	.hero-meta {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 10px 24px;
+		margin: 40px 0 0;
+		padding: 0;
+		list-style: none;
+		font-size: 13px;
+		color: var(--mute);
+	}
+
+	.hero-meta li {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+	}
+
+	.hero-meta li + li {
+		padding-left: 24px;
+		border-left: 1px solid var(--hairline);
+	}
+
+	.hero-meta span {
+		color: var(--ink);
+		font-weight: 500;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.calculator-band {
+		padding: 8px 0 96px;
+	}
+
+	.section {
+		padding: 96px 0;
+		border-top: 1px solid var(--hairline);
+	}
+
+	.section-head {
+		max-width: 640px;
+	}
+
+	.section-head .eyebrow {
+		color: var(--mute);
+	}
+
+	.section-head h2 {
+		margin: 12px 0 0;
+		font-size: clamp(28px, 4vw, 40px);
+		font-weight: 600;
+		line-height: 1.1;
+		letter-spacing: -1.6px;
+	}
+
+	.section-head > p:last-child {
+		margin: 12px 0 0;
+		font-size: 16px;
+		line-height: 26px;
+		color: var(--body);
+	}
+
+	.card-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 12px;
+		margin-top: 40px;
+	}
+
+	.card {
+		display: flex;
+		flex-direction: column;
+		padding: 24px;
+		border: 1px solid var(--hairline);
+		border-radius: 12px;
+		background: var(--canvas-elevated);
+	}
+
+	.card-num {
+		color: var(--mute);
+	}
+
+	.card h3 {
+		margin: 12px 0 0;
+		font-size: 18px;
+		font-weight: 600;
+		letter-spacing: -0.36px;
+	}
+
+	.card p {
+		margin: 8px 0 0;
+		font-size: 14px;
+		line-height: 22px;
+		color: var(--body);
+	}
+
+	.card code {
+		margin-top: 20px;
+		padding: 8px 10px;
+		border: 1px solid var(--hairline-soft);
+		border-radius: 6px;
+		background: var(--canvas);
+		font-family: var(--font-mono);
+		font-size: 12px;
+		color: var(--body);
+	}
+
+	.popular-grid {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 10px;
+		margin-top: 32px;
+	}
+
+	.popular-card {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		padding: 16px 18px;
+		border: 1px solid var(--hairline);
+		border-radius: 12px;
+		background: var(--canvas-elevated);
+		transition:
+			border-color 0.15s ease,
+			transform 0.15s ease;
+	}
+
+	.popular-card:hover {
+		border-color: #d4d4d4;
+		transform: translateY(-1px);
+	}
+
+	.popular-rate {
+		font-size: 21px;
+		font-weight: 600;
+		letter-spacing: -0.7px;
+		color: var(--ink);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.popular-rate span {
+		margin-left: 2px;
+		font-size: 12px;
+		font-weight: 500;
+		letter-spacing: 0;
+		color: var(--mute);
+	}
+
+	.popular-annual {
+		font-size: 13px;
+		color: var(--body);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.popular-biweekly {
+		font-size: 11px;
+		color: var(--faint);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.popular-more {
+		display: flex;
+		justify-content: center;
+		margin-top: 24px;
+	}
+
+	@media (max-width: 900px) {
+		.popular-grid {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+	}
+
+	@media (max-width: 720px) {
+		.hero {
+			padding: 72px 0 56px;
+		}
+
+		.hero h1 {
+			letter-spacing: -2px;
+		}
+
+		.lede {
+			font-size: 16px;
+			line-height: 26px;
+		}
+
+		.hero-meta {
+			gap: 8px 16px;
+		}
+
+		.hero-meta li + li {
+			padding-left: 0;
+			border-left: 0;
+		}
+
+		.section {
+			padding: 72px 0;
+		}
+
+		.card-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.popular-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	@media (max-width: 480px) {
+		.hero-actions,
+		.hero-actions .button {
+			width: 100%;
+		}
+
+		.eyebrow {
+			font-size: 10px;
+		}
+
+		.popular-more .button {
+			width: 100%;
+		}
+	}
+</style>
