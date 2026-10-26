@@ -28,6 +28,48 @@ const calculatorHref = pathname === '/popular-wages' ? '/#calculator-band' : '#c
 				</a>
 			))}
 		</nav>
+		<button
+			id="theme-toggle"
+			type="button"
+			class="inline-flex h-8 w-8 shrink-0 cursor-pointer appearance-none items-center justify-center rounded-full border border-zinc-200 bg-white p-0 text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-50 dark:focus-visible:ring-offset-slate-900"
+			aria-label="Switch to dark mode"
+			aria-pressed="false"
+		>
+			<svg
+				class="hidden h-4 w-4 dark:block"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.8"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				aria-hidden="true"
+				focusable="false"
+			>
+				<circle cx="12" cy="12" r="4"></circle>
+				<path d="M12 2v2"></path>
+				<path d="M12 20v2"></path>
+				<path d="m4.93 4.93 1.41 1.41"></path>
+				<path d="m17.66 17.66 1.41 1.41"></path>
+				<path d="M2 12h2"></path>
+				<path d="M20 12h2"></path>
+				<path d="m6.34 17.66-1.41 1.41"></path>
+				<path d="m19.07 4.93-1.41 1.41"></path>
+			</svg>
+			<svg
+				class="h-4 w-4 dark:hidden"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.8"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				aria-hidden="true"
+				focusable="false"
+			>
+				<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+			</svg>
+		</button>
 		<a class="header-cta" href={calculatorHref}>Calculate pay</a>
 	</div>
 </header>
@@ -37,7 +79,7 @@ const calculatorHref = pathname === '/popular-wages' ? '/#calculator-band' : '#c
 		position: sticky;
 		top: 0;
 		z-index: 20;
-		background: rgba(250, 250, 250, 0.82);
+		background: var(--header-bg);
 		backdrop-filter: saturate(1.4) blur(12px);
 		-webkit-backdrop-filter: saturate(1.4) blur(12px);
 		border-bottom: 1px solid var(--hairline);
@@ -88,14 +130,14 @@ const calculatorHref = pathname === '/popular-wages' ? '/#calculator-band' : '#c
 		padding: 0 12px;
 		border-radius: 6px;
 		background: var(--ink);
-		color: #ffffff;
+		color: var(--on-ink);
 		font-size: 13px;
 		font-weight: 500;
 		transition: background 0.15s ease;
 	}
 
 	.header-cta:hover {
-		background: #333333;
+		background: var(--primary-hover);
 	}
 
 	@media (max-width: 760px) {

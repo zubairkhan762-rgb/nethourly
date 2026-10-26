@@ -448,7 +448,7 @@ const hours = (value: number) =>
 	}
 
 	.panel {
-		background: #ffffff;
+		background: var(--canvas-elevated);
 		border: 1px solid var(--hairline, #ebebeb);
 		border-radius: 16px;
 	}
@@ -518,7 +518,7 @@ const hours = (value: number) =>
 		display: flex;
 		align-items: center;
 		height: 40px;
-		background: #ffffff;
+		background: var(--input-bg);
 		border: 1px solid var(--hairline, #ebebeb);
 		border-radius: 6px;
 		transition:
@@ -528,7 +528,7 @@ const hours = (value: number) =>
 
 	.control:focus-within {
 		border-color: var(--ink, #171717);
-		box-shadow: 0 0 0 3px rgba(23, 23, 23, 0.08);
+		box-shadow: var(--focus-shadow);
 	}
 
 	.control input {
@@ -628,11 +628,11 @@ const hours = (value: number) =>
 
 	.segmented input:checked + span {
 		background: var(--ink, #171717);
-		color: #ffffff;
+		color: var(--on-ink);
 	}
 
 	.segmented input:focus-visible + span {
-		box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.35);
+		box-shadow: var(--focus-accent);
 	}
 
 	.readout {
@@ -672,7 +672,7 @@ const hours = (value: number) =>
 		height: 20px;
 		margin-top: 2px;
 		border-radius: 100px;
-		background: #e3e3e3;
+		background: var(--switch-bg);
 		transition: background 0.15s ease;
 	}
 
@@ -684,8 +684,8 @@ const hours = (value: number) =>
 		width: 16px;
 		height: 16px;
 		border-radius: 50%;
-		background: #ffffff;
-		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+		background: var(--switch-knob);
+		box-shadow: var(--knob-shadow);
 		transition: transform 0.15s ease;
 	}
 
@@ -694,11 +694,12 @@ const hours = (value: number) =>
 	}
 
 	.switch-row input:checked + .switch::after {
+		background: var(--on-ink);
 		transform: translateX(16px);
 	}
 
 	.switch-row input:focus-visible + .switch {
-		box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.35);
+		box-shadow: var(--focus-accent);
 	}
 
 	.switch-copy {
@@ -749,9 +750,7 @@ const hours = (value: number) =>
 		padding: 0 28px 0 10px;
 		border: 1px solid var(--hairline, #ebebeb);
 		border-radius: 100px;
-		background: #ffffff
-			url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23171717' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
-			no-repeat right 10px center;
+		background: var(--input-bg) var(--select-arrow) no-repeat right 10px center;
 		font: inherit;
 		font-size: 12px;
 		font-weight: 500;

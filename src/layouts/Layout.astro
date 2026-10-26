@@ -1,4 +1,5 @@
 ---
+import '../styles/global.css';
 import SiteFooter from '../components/SiteFooter.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import { SITE_NAME, SITE_URL } from '../lib/seo';
@@ -31,7 +32,55 @@ const canonical = new URL(canonicalUrl ?? Astro.url.pathname, siteOrigin);
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="description" content={description} />
-		<meta name="theme-color" content="#fafafa" />
+		<meta name="theme-color" id="theme-color" content="#fafafa" />
+		<script is:inline>
+			(() => {
+				const root = document.documentElement;
+				const media = window.matchMedia('(prefers-color-scheme: dark)');
+				const read = () => {
+					try {
+						const value = localStorage.getItem('theme');
+						return value === 'dark' || value === 'light' ? value : null;
+					} catch {
+						return null;
+					}
+				};
+				const save = (value) => {
+					try {
+						localStorage.setItem('theme', value);
+					} catch {}
+				};
+				const initial = read() ?? (media.matches ? 'dark' : 'light');
+				const apply = (value) => {
+					const isDark = value === 'dark';
+					root.classList.toggle('dark', isDark);
+					root.style.colorScheme = isDark ? 'dark' : 'light';
+					const meta = document.getElementById('theme-color');
+					if (meta) meta.setAttribute('content', isDark ? '#0f172a' : '#fafafa');
+					const toggle = document.getElementById('theme-toggle');
+					if (toggle) {
+						toggle.setAttribute('aria-pressed', String(isDark));
+						toggle.setAttribute(
+							'aria-label',
+							isDark ? 'Switch to light mode' : 'Switch to dark mode'
+						);
+					}
+				};
+				apply(initial);
+				document.addEventListener('DOMContentLoaded', () => {
+					const toggle = document.getElementById('theme-toggle');
+					if (!toggle) return;
+					toggle.addEventListener('click', () => {
+						const next = root.classList.contains('dark') ? 'light' : 'dark';
+						save(next);
+						apply(next);
+					});
+					media.addEventListener('change', (event) => {
+						if (!read()) apply(event.matches ? 'dark' : 'light');
+					});
+				});
+			})();
+		</script>
 		{noindex && <meta name="robots" content="noindex, follow" />}
 		<link rel="canonical" href={canonical.href} />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -62,7 +111,7 @@ const canonical = new URL(canonicalUrl ?? Astro.url.pathname, siteOrigin);
 			/>
 		)}
 	</head>
-	<body>
+	<body class="bg-(--canvas) text-(--ink) dark:bg-slate-900 dark:text-zinc-50">
 		<a class="skip-link" href="#main-content">Skip to content</a>
 		<SiteHeader />
 		<main id="main-content">
@@ -76,17 +125,72 @@ const canonical = new URL(canonicalUrl ?? Astro.url.pathname, siteOrigin);
 	:root {
 		--canvas: #fafafa;
 		--canvas-elevated: #ffffff;
+		--input-bg: #ffffff;
 		--ink: #171717;
 		--body: #4d4d4d;
 		--mute: #8f8f8f;
 		--faint: #a1a1a1;
 		--hairline: #ebebeb;
 		--hairline-soft: #f2f2f2;
+		--hairline-strong: #d4d4d4;
 		--link: #0070f3;
+		--link-deep: #0059c7;
+		--warning: #b45309;
+		--warning-soft: #fffbeb;
+		--on-ink: #ffffff;
+		--primary-hover: #333333;
+		--header-bg: rgba(250, 250, 250, 0.82);
+		--eyebrow-bg: rgba(255, 255, 255, 0.7);
+		--translucent-surface: rgba(255, 255, 255, 0.7);
+		--switch-bg: #e3e3e3;
+		--switch-knob: #ffffff;
+		--on-ink-muted: rgba(255, 255, 255, 0.62);
+		--select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23171717' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+		--shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+		--focus-shadow: 0 0 0 3px rgba(23, 23, 23, 0.08);
+		--focus-accent: 0 0 0 3px rgba(0, 112, 243, 0.35);
+		--knob-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+		--stripe-a: #f2f2f2;
+		--stripe-b: #e4e4e4;
+		--seg-divider: rgba(255, 255, 255, 0.45);
 		--font-sans: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial,
 			sans-serif;
 		--font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 		color-scheme: light;
+	}
+
+	html.dark {
+		--canvas: #0f172a;
+		--canvas-elevated: #18181b;
+		--input-bg: #09090b;
+		--ink: #fafafa;
+		--body: #d4d4d8;
+		--mute: #a1a1aa;
+		--faint: #71717a;
+		--hairline: #27272a;
+		--hairline-soft: #1f1f23;
+		--hairline-strong: #3f3f46;
+		--link: #60a5fa;
+		--link-deep: #93c5fd;
+		--warning: #fbbf24;
+		--warning-soft: rgba(251, 191, 36, 0.1);
+		--on-ink: #09090b;
+		--primary-hover: #e4e4e7;
+		--header-bg: rgba(15, 23, 42, 0.82);
+		--eyebrow-bg: rgba(24, 24, 27, 0.7);
+		--translucent-surface: rgba(24, 24, 27, 0.7);
+		--switch-bg: #3f3f46;
+		--switch-knob: #fafafa;
+		--on-ink-muted: rgba(9, 9, 11, 0.62);
+		--select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23fafafa' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+		--shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+		--focus-shadow: 0 0 0 3px rgba(250, 250, 250, 0.14);
+		--focus-accent: 0 0 0 3px rgba(96, 165, 250, 0.45);
+		--knob-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+		--stripe-a: #27272a;
+		--stripe-b: #1f1f23;
+		--seg-divider: rgba(255, 255, 255, 0.12);
+		color-scheme: dark;
 	}
 
 	*,
@@ -98,25 +202,30 @@ const canonical = new URL(canonicalUrl ?? Astro.url.pathname, siteOrigin);
 	html {
 		scroll-behavior: smooth;
 		scroll-padding-top: 88px;
+		background: var(--canvas);
 	}
 
 	body {
 		margin: 0;
 		min-height: 100vh;
-		background: var(--canvas);
-		color: var(--ink);
 		font-family: var(--font-sans);
 		font-size: 16px;
 		line-height: 1.5;
 		-webkit-font-smoothing: antialiased;
 		-moz-osx-font-smoothing: grayscale;
 		text-rendering: optimizeLegibility;
+		transition:
+			background-color 0.2s ease,
+			color 0.2s ease;
 	}
 
 	img,
 	svg {
-		display: block;
 		max-width: 100%;
+	}
+
+	img {
+		display: block;
 	}
 
 	a {
@@ -133,7 +242,7 @@ const canonical = new URL(canonicalUrl ?? Astro.url.pathname, siteOrigin);
 
 	::selection {
 		background: var(--ink);
-		color: #ffffff;
+		color: var(--on-ink);
 	}
 
 	:focus-visible {
@@ -146,6 +255,10 @@ const canonical = new URL(canonicalUrl ?? Astro.url.pathname, siteOrigin);
 		max-width: 1120px;
 		margin: 0 auto;
 		padding: 0 24px;
+	}
+
+	html.dark .mesh {
+		opacity: 0.62;
 	}
 
 	.mono {
@@ -165,7 +278,7 @@ const canonical = new URL(canonicalUrl ?? Astro.url.pathname, siteOrigin);
 		padding: 5px 11px;
 		border: 1px solid var(--hairline);
 		border-radius: 100px;
-		background: rgba(255, 255, 255, 0.7);
+		background: var(--eyebrow-bg);
 		color: var(--body);
 		font-size: 11px;
 	}
@@ -185,7 +298,7 @@ const canonical = new URL(canonicalUrl ?? Astro.url.pathname, siteOrigin);
 		height: 26px;
 		border-radius: 7px;
 		background: var(--ink);
-		color: #ffffff;
+		color: var(--on-ink);
 		font-size: 13px;
 		font-weight: 600;
 		line-height: 1;
@@ -224,11 +337,11 @@ const canonical = new URL(canonicalUrl ?? Astro.url.pathname, siteOrigin);
 
 	.button-primary {
 		background: var(--ink);
-		color: #ffffff;
+		color: var(--on-ink);
 	}
 
 	.button-primary:hover {
-		background: #333333;
+		background: var(--primary-hover);
 	}
 
 	.button-secondary {
@@ -238,7 +351,7 @@ const canonical = new URL(canonicalUrl ?? Astro.url.pathname, siteOrigin);
 	}
 
 	.button-secondary:hover {
-		border-color: #d4d4d4;
+		border-color: var(--hairline-strong);
 	}
 
 	.sr-only {
@@ -261,7 +374,7 @@ const canonical = new URL(canonicalUrl ?? Astro.url.pathname, siteOrigin);
 		padding: 8px 12px;
 		border-radius: 6px;
 		background: var(--ink);
-		color: #ffffff;
+		color: var(--on-ink);
 		font-size: 14px;
 	}
 
