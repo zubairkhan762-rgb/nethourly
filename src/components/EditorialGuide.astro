@@ -416,8 +416,12 @@ const { id, eyebrow, title, lede, toc, asideNote } = Astro.props;
 
 	@media (max-width: 960px) {
 		.editorial-grid {
-			grid-template-columns: 1fr;
+			grid-template-columns: minmax(0, 1fr);
 			gap: 32px;
+		}
+
+		.editorial-grid > * {
+			min-width: 0;
 		}
 
 		.editorial-toc {

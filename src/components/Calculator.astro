@@ -951,7 +951,16 @@ const hours = (value: number) =>
 
 	@media (max-width: 940px) {
 		.calc-grid {
-			grid-template-columns: 1fr;
+			grid-template-columns: minmax(0, 1fr);
+		}
+
+		.calc-grid > * {
+			min-width: 0;
+		}
+
+		.table-panel,
+		.table-scroll {
+			min-width: 0;
 		}
 
 		.result-panel {

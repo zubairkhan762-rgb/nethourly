@@ -33,6 +33,13 @@ const canonical = new URL(canonicalUrl ?? Astro.url.pathname, siteOrigin);
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="description" content={description} />
 		<meta name="theme-color" id="theme-color" content="#fafafa" />
+		<script async src="https://www.googletagmanager.com/gtag/js?id=G-4EXWN377CK" is:inline></script>
+		<script is:inline>
+			window.dataLayer = window.dataLayer || [];
+			function gtag(){dataLayer.push(arguments);}
+			gtag('js', new Date());
+			gtag('config', 'G-4EXWN377CK');
+		</script>
 		<script is:inline>
 			(() => {
 				const root = document.documentElement;
