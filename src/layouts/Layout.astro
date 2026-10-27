@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import ScrollToTop from '../components/ScrollToTop.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import { SITE_NAME, SITE_URL } from '../lib/seo';
@@ -125,6 +126,7 @@ const canonical = new URL(canonicalUrl ?? Astro.url.pathname, siteOrigin);
 			<slot />
 		</main>
 		<SiteFooter />
+		<ScrollToTop />
 	</body>
 </html>
 

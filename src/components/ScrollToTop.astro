@@ -1,0 +1,105 @@
+---
+const label = 'Back to top';
+---
+
+<button class="to-top" type="button" data-to-top aria-label={label} title={label}>
+	<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+		<path d="M12 19V5" />
+		<path d="m5 12 7-7 7 7" />
+	</svg>
+</button>
+
+<script>
+	const button = document.querySelector<HTMLButtonElement>('[data-to-top]');
+
+	if (button) {
+		const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+		let ticking = false;
+
+		const update = () => {
+			const shouldShow = window.scrollY > 400;
+			button.classList.toggle('is-visible', shouldShow);
+			button.tabIndex = shouldShow ? 0 : -1;
+			button.setAttribute('aria-hidden', String(!shouldShow));
+			ticking = false;
+		};
+
+		const onScroll = () => {
+			if (ticking) return;
+			ticking = true;
+			window.requestAnimationFrame(update);
+		};
+
+		button.tabIndex = -1;
+		button.setAttribute('aria-hidden', 'true');
+
+		button.addEventListener('click', () => {
+			window.scrollTo({
+				top: 0,
+				behavior: prefersReducedMotion.matches ? 'auto' : 'smooth',
+			});
+			button.blur();
+		});
+
+		window.addEventListener('scroll', onScroll, { passive: true });
+		window.addEventListener('resize', onScroll, { passive: true });
+		update();
+	}
+</script>
+
+<style>
+	.to-top {
+		position: fixed;
+		right: 24px;
+		bottom: 24px;
+		z-index: 90;
+		display: grid;
+		place-items: center;
+		width: 46px;
+		height: 46px;
+		padding: 0;
+		border: 1px solid var(--hairline);
+		border-radius: 50%;
+		background: var(--canvas-elevated);
+		color: var(--ink);
+		box-shadow: var(--shadow);
+		opacity: 0;
+		transform: translateY(12px) scale(0.96);
+		pointer-events: none;
+		transition:
+			opacity 0.2s ease,
+			transform 0.2s ease,
+			border-color 0.15s ease,
+			background-color 0.2s ease;
+	}
+
+	.to-top.is-visible {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+		pointer-events: auto;
+	}
+
+	.to-top:hover {
+		border-color: var(--hairline-strong);
+	}
+
+	.to-top:active {
+		transform: translateY(0) scale(0.96);
+	}
+
+	@media (max-width: 640px) {
+		.to-top {
+			right: 16px;
+			bottom: 16px;
+			width: 42px;
+			height: 42px;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.to-top {
+			transition: opacity 0.01ms;
+			transform: none;
+		}
+	}
+</style>
