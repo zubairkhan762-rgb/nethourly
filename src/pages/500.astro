@@ -1,0 +1,262 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { POPULAR_WAGES, formatUSD, getWageStats } from '../data/wages';
+
+const money = (value: number) => formatUSD(value, 0);
+const quickLinks = [
+	{
+		href: '/#calculator-band',
+		label: 'Hourly pay calculator',
+		description: 'Convert any hourly rate into weekly, bi-weekly, monthly, and annual pay.',
+	},
+	{
+		href: '/24-hour-shift-calculator',
+		label: '24-hour shift calculator',
+		description: 'Apply FLSA sleep and meal deductions and California daily overtime.',
+	},
+	{
+		href: '/overtime-calculator',
+		label: 'Overtime calculator',
+		description: 'Find time and a half and double time pay for any hourly rate.',
+	},
+	{
+		href: '/popular-wages',
+		label: 'Popular wage guides',
+		description: 'Browse hourly rates from $7.25 to $100 with full pay breakdowns.',
+	},
+];
+---
+
+<Layout
+	title="Server Error (500) | NetHourly"
+	description="Something went wrong on our side. Refresh the page or jump back to the hourly pay calculator, 24-hour shift calculator, overtime calculator, or popular wage guides."
+	noindex
+>
+	<section class="not-found">
+		<div class="mesh" aria-hidden="true"></div>
+		<div class="shell inner">
+			<p class="eyebrow mono">Error 500 · System hiccup</p>
+			<h1>Our shift hit a snag.</h1>
+			<p class="lede">
+				Something went wrong on our end while loading this page. Try refreshing, or use the
+				calculators and wage guides below.
+			</p>
+			<div class="actions">
+				<button class="button button-primary" type="button" data-reload>Reload this page</button>
+				<a class="button button-secondary" href="/#calculator-band">Open the pay calculator</a>
+			</div>
+		</div>
+	</section>
+
+	<section class="links-section">
+		<div class="shell">
+			<div class="link-grid">
+				{quickLinks.map((link) => (
+					<a class="link-card" href={link.href}>
+						<strong>{link.label}</strong>
+						<span>{link.description}</span>
+					</a>
+				))}
+			</div>
+
+			<div class="popular">
+				<p class="eyebrow mono">Top wage guides</p>
+				<ul>
+					{POPULAR_WAGES.slice(0, 8).map((wage) => {
+						const stats = getWageStats(wage.rate);
+						return (
+							<li>
+								<a href={`/wage/${wage.slug}`}>
+									<span>{wage.display}/hr</span>
+									<small>{money(stats.annual)}/yr</small>
+								</a>
+							</li>
+						);
+					})}
+				</ul>
+			</div>
+		</div>
+	</section>
+</Layout>
+
+<script>
+	document.querySelectorAll('[data-reload]').forEach((button) => {
+		button.addEventListener('click', () => window.location.reload());
+	});
+</script>
+
+<style>
+	.not-found {
+		position: relative;
+		overflow: hidden;
+		padding: 96px 0 72px;
+		text-align: center;
+	}
+
+	.mesh {
+		position: absolute;
+		inset: -260px -10% auto;
+		height: 640px;
+		background:
+			radial-gradient(38% 55% at 18% 42%, rgba(0, 124, 240, 0.28), transparent 70%),
+			radial-gradient(32% 50% at 44% 20%, rgba(121, 40, 202, 0.22), transparent 72%),
+			radial-gradient(38% 55% at 70% 44%, rgba(255, 0, 128, 0.15), transparent 72%),
+			radial-gradient(30% 48% at 88% 22%, rgba(249, 203, 40, 0.2), transparent 72%);
+		filter: blur(36px);
+		pointer-events: none;
+		-webkit-mask-image: linear-gradient(to bottom, #000 40%, transparent 100%);
+		mask-image: linear-gradient(to bottom, #000 40%, transparent 100%);
+	}
+
+	.inner {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.inner .eyebrow {
+		color: var(--mute);
+	}
+
+	h1 {
+		max-width: 780px;
+		margin: 20px 0 0;
+		font-size: clamp(40px, 7vw, 68px);
+		font-weight: 600;
+		line-height: 1;
+		letter-spacing: -3px;
+	}
+
+	.lede {
+		max-width: 560px;
+		margin: 18px 0 0;
+		font-size: 17px;
+		line-height: 27px;
+		color: var(--body);
+	}
+
+	.actions {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 8px;
+		margin-top: 28px;
+	}
+
+	.links-section {
+		padding: 0 0 96px;
+	}
+
+	.link-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 12px;
+	}
+
+	.link-card {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		padding: 20px;
+		border: 1px solid var(--hairline);
+		border-radius: 12px;
+		background: var(--canvas-elevated);
+		transition:
+			border-color 0.15s ease,
+			transform 0.15s ease;
+	}
+
+	.link-card:hover {
+		border-color: var(--hairline-strong);
+		transform: translateY(-1px);
+	}
+
+	.link-card strong {
+		font-size: 16px;
+		font-weight: 600;
+		letter-spacing: -0.3px;
+		color: var(--ink);
+	}
+
+	.link-card span {
+		font-size: 13px;
+		line-height: 20px;
+		color: var(--body);
+	}
+
+	.popular {
+		margin-top: 32px;
+		padding-top: 28px;
+		border-top: 1px solid var(--hairline);
+	}
+
+	.popular .eyebrow {
+		color: var(--mute);
+	}
+
+	.popular ul {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 8px;
+		margin: 14px 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.popular a {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		padding: 12px 14px;
+		border: 1px solid var(--hairline);
+		border-radius: 10px;
+		background: var(--canvas-elevated);
+		font-size: 15px;
+		font-weight: 500;
+		color: var(--ink);
+		font-variant-numeric: tabular-nums;
+		transition: border-color 0.15s ease;
+	}
+
+	.popular a:hover {
+		border-color: var(--hairline-strong);
+	}
+
+	.popular small {
+		font-size: 11px;
+		font-weight: 400;
+		color: var(--mute);
+	}
+
+	@media (max-width: 900px) {
+		.popular ul {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	@media (max-width: 640px) {
+		.not-found {
+			padding: 64px 0 52px;
+		}
+
+		h1 {
+			letter-spacing: -2px;
+		}
+
+		.lede {
+			font-size: 15px;
+			line-height: 24px;
+		}
+
+		.link-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.actions,
+		.actions .button {
+			width: 100%;
+		}
+	}
+</style>
