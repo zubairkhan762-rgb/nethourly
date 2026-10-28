@@ -123,7 +123,7 @@ const hours = (value: number) =>
 								id="shifts-week"
 								name="shifts-week"
 								type="number"
-								inputmode="numeric"
+								inputmode="decimal"
 								min="0"
 								max="7"
 								step="1"
@@ -139,7 +139,7 @@ const hours = (value: number) =>
 								id="sleep-deduction"
 								name="sleep-deduction"
 								type="number"
-								inputmode="numeric"
+								inputmode="decimal"
 								min="0"
 								max="8"
 								step="1"
@@ -157,7 +157,7 @@ const hours = (value: number) =>
 								id="meal-deduction"
 								name="meal-deduction"
 								type="number"
-								inputmode="numeric"
+								inputmode="decimal"
 								min="0"
 								max="3"
 								step="1"
@@ -189,7 +189,7 @@ const hours = (value: number) =>
 						id="weeks-year"
 						name="weeks-year"
 						type="number"
-						inputmode="numeric"
+						inputmode="decimal"
 						min="1"
 						max="52"
 						step="1"
@@ -993,6 +993,19 @@ const hours = (value: number) =>
 			text-align: left;
 		}
 
+		.result-head {
+			align-items: flex-start;
+			flex-direction: column;
+		}
+
+		.tax-select,
+		.tax-select select {
+			width: 100%;
+			max-width: none;
+		}
+	}
+
+	@media (max-width: 640px) {
 		table {
 			font-size: 12px;
 		}
@@ -1015,17 +1028,6 @@ const hours = (value: number) =>
 		thead th:last-child,
 		tbody td:last-child {
 			padding-right: 0;
-		}
-
-		.result-head {
-			align-items: flex-start;
-			flex-direction: column;
-		}
-
-		.tax-select,
-		.tax-select select {
-			width: 100%;
-			max-width: none;
 		}
 	}
 </style>
