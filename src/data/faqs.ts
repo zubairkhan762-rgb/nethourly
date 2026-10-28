@@ -36,6 +36,24 @@ export const faqTakeHomeEstimate: FaqItem = {
 		'It is a planning estimate, not tax advice. The standard scenario applies roughly 18% total — FICA at 7.65% plus about 10.35% effective federal income tax. The high-tax scenario uses 24% for states such as California, New York, New Jersey, and Oregon; the no-income-tax scenario uses 15% for states such as Texas, Florida, Washington, and Nevada. Actual withholding depends on filing status, deductions, credits, and location.',
 };
 
+export const faqFederalMinimumWage: FaqItem = {
+	question: 'What is the federal minimum wage in the U.S. versus state minimum wages?',
+	answer:
+		'The federal minimum wage is $7.25 per hour, which has remained unchanged since 2009. However, over 30 states and many cities mandate higher rates—ranging from $12 to over $17 per hour in states like California, Washington, and New York. Employers must always pay the higher applicable rate (federal, state, or local).',
+};
+
+export const faqAverageHourlyWage: FaqItem = {
+	question: 'What is the average hourly wage in the U.S., and what is considered a good starting rate?',
+	answer:
+		'The average hourly wage in the U.S. ranges between $24 and $28 per hour across all private-sector jobs. For an entry-level or first job (such as retail, food service, or warehouse roles), $15 to $20 per hour is generally considered a competitive starting rate depending on your state\'s cost of living.',
+};
+
+export const faqStudentHourlyPay: FaqItem = {
+	question: 'How much do college and international students make per hour in the U.S.?',
+	answer:
+		'Students working part-time or on-campus jobs typically earn between $12 and $20 per hour, depending on the state minimum wage and role. International students on F-1 visas are generally limited to 20 hours per week during active academic terms (40 hours during breaks) and are often exempt from FICA (Social Security and Medicare) taxes under specific IRS student exemptions.',
+};
+
 export const CORE_PAYROLL_FAQS: FaqItem[] = [
 	faqBiWeeklyVsSemiMonthly,
 	faqFica,
@@ -43,4 +61,7 @@ export const CORE_PAYROLL_FAQS: FaqItem[] = [
 	faqCaliforniaDailyOvertime,
 	faqFlsaWeeklyOvertime,
 	faqTakeHomeEstimate,
+	faqFederalMinimumWage,
+	faqAverageHourlyWage,
+	faqStudentHourlyPay,
 ];
