@@ -1,1 +1,2 @@
-https://nethourly.pages.dev/* https://nethourly.com/:splat 301!
+# Domain-level redirects are not supported in _redirects.
+# The pages.dev -> nethourly.com redirect is handled in functions/_middleware.js.
