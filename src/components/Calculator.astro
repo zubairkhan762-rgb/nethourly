@@ -726,13 +726,19 @@ const hours = (value: number) =>
 	}
 
 	.result-panel {
-		position: sticky;
-		top: 80px;
 		display: flex;
 		flex-direction: column;
 		gap: 20px;
 		padding: 24px;
 		overflow: hidden;
+	}
+
+	@media (min-width: 941px) {
+		.result-panel {
+			position: sticky;
+			top: 6rem;
+			align-self: start;
+		}
 	}
 
 	.result-head {
@@ -961,10 +967,6 @@ const hours = (value: number) =>
 		.table-panel,
 		.table-scroll {
 			min-width: 0;
-		}
-
-		.result-panel {
-			position: static;
 		}
 	}
 
