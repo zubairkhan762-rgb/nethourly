@@ -993,6 +993,30 @@ const hours = (value: number) =>
 			text-align: left;
 		}
 
+		table {
+			font-size: 12px;
+		}
+
+		thead th {
+			padding: 8px 3px;
+			font-size: 10px;
+			letter-spacing: 0;
+		}
+
+		tbody td {
+			padding: 10px 3px;
+		}
+
+		thead th:first-child,
+		tbody td:first-child {
+			padding-left: 0;
+		}
+
+		thead th:last-child,
+		tbody td:last-child {
+			padding-right: 0;
+		}
+
 		.result-head {
 			align-items: flex-start;
 			flex-direction: column;
