@@ -275,7 +275,7 @@ const description =
 	}
 
 	.category {
-		padding: 56px 0 8px;
+		padding: 56px 0;
 		border-bottom: 1px solid var(--hairline);
 	}
 
@@ -324,7 +324,6 @@ const description =
 		display: grid;
 		grid-template-columns: repeat(4, minmax(0, 1fr));
 		gap: 10px;
-		padding-bottom: 32px;
 	}
 
 	.wage-card {
@@ -544,6 +543,18 @@ const description =
 		gap: 8px;
 	}
 
+	:global(.site-header) {
+		background: color-mix(in srgb, var(--canvas) 92%, transparent);
+		-webkit-backdrop-filter: saturate(1.4) blur(16px);
+		backdrop-filter: saturate(1.4) blur(16px);
+	}
+
+	@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+		:global(.site-header) {
+			background: var(--canvas);
+		}
+	}
+
 	@media (max-width: 1024px) {
 		.wage-grid {
 			grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -580,7 +591,7 @@ const description =
 		}
 
 		.category {
-			padding-top: 44px;
+			padding: 40px 0;
 		}
 
 		.category-head {
