@@ -69,6 +69,19 @@ export function estimateFederalIncomeTax(annualGross: number): number {
   return tax;
 }
 
+export function getFederalMarginalRate(annualGross: number): number {
+  const taxableIncome = Math.max(
+    0,
+    (Number.isFinite(annualGross) ? annualGross : 0) - FEDERAL_STANDARD_DEDUCTION,
+  );
+
+  for (const bracket of FEDERAL_BRACKETS) {
+    if (taxableIncome <= bracket.upTo) return bracket.rate;
+  }
+
+  return FEDERAL_BRACKETS[FEDERAL_BRACKETS.length - 1].rate;
+}
+
 export interface TakeHomeEstimate {
   federalTax: number;
   stateTax: number;

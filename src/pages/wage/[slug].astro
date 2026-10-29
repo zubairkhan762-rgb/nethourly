@@ -4,6 +4,7 @@ import Calculator from '../../components/Calculator.astro';
 import EditorialGuide from '../../components/EditorialGuide.astro';
 import FaqSection from '../../components/FaqSection.astro';
 import Layout from '../../layouts/Layout.astro';
+import { estimateTakeHome, getFederalMarginalRate } from '../../lib/payroll';
 import {
 	STATE_MINIMUM_WAGES,
 	WAGE_TAX_TIERS,
@@ -40,6 +41,8 @@ const nearby = getNearbyWages(wage.slug, 6);
 
 const money = (value: number) => formatUSD(value, 0);
 const rateMoney = (value: number) => formatRate(value);
+const percent = (value: number) =>
+	`${(Math.round(value * 10000) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 })}%`;
 
 const netWeekly = stats.weekly * (1 - standardTax);
 const netMonthly = stats.monthly * (1 - standardTax);
@@ -62,51 +65,6 @@ const overtimeWeeksText =
 		: Math.ceil(weeksAtFiveOvertime).toLocaleString('en-US');
 const nextMilestoneText = `At ${rateMoney(stats.overtimeRate)}/hr overtime, the next $10,000 milestone (${money(nextMilestone)} annual gross) is about ${overtimeHoursText} overtime hours, or ${overtimeWeeksText} weeks at five overtime hours a week.`;
 
-const wageTier = (() => {
-	if (wage.rate < 15) {
-		return {
-			label: 'Entry-level wage',
-			paragraphs: [
-				`At ${wage.display}/hr, you are working near or below many state and city minimums. Typical jobs include fast food, retail cashier, home health aide, janitorial, childcare, and seasonal warehouse work. The federal floor is $7.25, but your state or city may be higher.`,
-				`Assistance can matter more than a small raise. SNAP, Medicaid, the Earned Income Tax Credit, and the Child Tax Credit can change the value of extra hours. A $0.50 raise can reduce benefits before it raises cash. Run the numbers before you turn down overtime or accept a promotion.`,
-				`The next $10,000 is usually about more hours, a shift differential, or a short certificate, not a merit raise. ${nextMilestoneText} That is a lot of shifts. A certified nursing assistant, forklift, or food-handler credential may be faster.`,
-				`Watch the cliff. A raise that pushes you off Medicaid or a housing voucher can leave you with less cash. Ask your benefits office for the income limits before you accept a change.`,
-			],
-		};
-	}
-	if (wage.rate < 22.5) {
-		return {
-			label: 'Middle-wage hourly work',
-			paragraphs: [
-				`At ${wage.display}/hr, you are above the federal minimum but below the wage where most benefits phase out. Typical jobs include warehouse associate, medical assistant, dental assistant, customer service, security, school bus driver, and entry-level trades.`,
-				`The next $10,000 is often a certification, a CDL, a CNA-to-LPN bridge, or a move to a company with a night differential. ${nextMilestoneText}`,
-				`Look at the full package, not just the rate. Health insurance, a 401(k) match, paid time off, and predictable scheduling can be worth more than $1/hr. A $1/hr raise is $2,080 a year before taxes; five overtime hours a week at this rate is ${money(fiveOvertimeAnnual)} a year.`,
-				`Assistance and credits taper here. The EITC may still help if you have children, but the phase-out range matters. Check before you assume a raise is pure gain.`,
-			],
-		};
-	}
-	if (wage.rate < 36) {
-		return {
-			label: 'Skilled hourly work',
-			paragraphs: [
-				`At ${wage.display}/hr, you are in skilled hourly work: LPN, HVAC apprentice, CDL driver, bookkeeper, welder, respiratory tech, and entry-level public safety. You are earning enough that taxes, benefits, and job quality matter more than the minimum wage.`,
-				`The next $10,000 usually comes from a license, a specialty, or a shift differential, not from adding more hours. ${nextMilestoneText} At this level, a 401(k) match and an HSA can be worth more than a small raise.`,
-				`Watch lifestyle creep. A $2/hr raise is $4,160 a year before taxes, but a car payment can eat it. Keep housing at or below the 3x gross screen and save the difference.`,
-				`Tax credits are mostly phased out at this level, but the Saver's Credit and child-related credits may still apply. If you are a 1099 contractor, set aside quarterly estimated taxes and track mileage, tools, and licenses.`,
-			],
-		};
-	}
-	return {
-		label: 'Experienced hourly work',
-		paragraphs: [
-			`At ${wage.display}/hr, you are in experienced hourly work: RN, electrician, plumber, senior technician, software contractor, and travel nurse. You may be near the Social Security wage base, the 22% or 24% federal bracket, and state taxes that change the value of overtime.`,
-			`The next $10,000 is usually a specialty certification, a travel contract, or a business expense strategy if you are a 1099 contractor. ${nextMilestoneText} At this level, extra shifts are expensive in time and tax.`,
-			`If you are a W-2 worker, max the 401(k) and HSA before you chase extra shifts. If you are a 1099 contractor, set aside quarterly estimated taxes and track mileage, tools, and licenses. A higher rate does not fix a bad benefits package.`,
-			`Watch the wage base. Once you pass the Social Security cap, your FICA withholding drops, and a late-year overtime check can look bigger than expected. That is a wage-base rule, not an overtime tax cut.`,
-		],
-	};
-})();
-
 const aboveFederal = wage.rate - 7.25;
 const federalNote =
 	aboveFederal > 0 ? `${rateMoney(aboveFederal)} above` : 'equal to';
@@ -116,6 +74,97 @@ const stateFloorNote =
 		: wage.rate >= 15
 			? `It is within the $15–$20 range that several states and cities have adopted as their minimum.`
 			: `It is below the $15–$20 range that several states and cities have adopted as their minimum.`;
+
+const noStateTax = estimateTakeHome(stats.annual, 'noState');
+const moderateStateTax = estimateTakeHome(stats.annual, 'moderateState');
+const highStateTax = estimateTakeHome(stats.annual, 'highState');
+const noStateNetAnnual = noStateTax.netAnnual;
+const moderateStateNetAnnual = moderateStateTax.netAnnual;
+const highStateNetAnnual = highStateTax.netAnnual;
+const stateTaxGap = noStateNetAnnual - highStateNetAnnual;
+const US_MEDIAN_INDIVIDUAL_INCOME = 50000;
+const medianGap = stats.annual - US_MEDIAN_INDIVIDUAL_INCOME;
+const medianNote =
+	medianGap >= 0
+		? `${money(Math.abs(medianGap))} above`
+		: `${money(Math.abs(medianGap))} below`;
+const federalMarginalRate = getFederalMarginalRate(stats.annual);
+const federalEffectiveRate = noStateTax.federalRate;
+const mortgageHousingCap = stats.monthly * 0.28;
+const mortgageDebtCap = stats.monthly * 0.36;
+
+const wageTier = (() => {
+	if (wage.rate < 17) {
+		const roles =
+			'retail associate, food-service worker, fulfillment center associate, cashier, and janitorial or home-health aide';
+		return {
+			label: 'Entry-level & minimum-wage tier',
+			meta: 'Entry-level pay near federal and state minimums, with studio and shared-housing math plus retail, food-service, and fulfillment roles.',
+			paragraphs: [
+				`At ${wage.display}/hr, full-time gross pay is ${money(stats.annual)} a year. That is ${federalNote} the $7.25 federal minimum wage. ${stateFloorNote} The 30% rent target here is ${money(rentCap)} a month, so a studio or shared apartment needs to stay near that line; in most metros that means roommates or a smaller unit.`,
+				`Typical roles at this level are ${roles}. Schedules and hours can matter more than the nominal rate, especially when overtime, shift differentials, or tipped pay are in the mix.`,
+				`A small raise can also collide with benefits. SNAP, Medicaid, the EITC, and housing assistance may phase out as income rises, so compare the raise in net cash rather than gross pay.`,
+				`Five overtime hours a week at 1.5x adds ${money(fiveHoursOvertime)} weekly and ${money(fiveOvertimeAnnual)} a year at this rate. ${nextMilestoneText}`,
+			],
+			faq: {
+				question: `What jobs pay ${wage.display} an hour, and is it above minimum wage?`,
+				answer: `At ${wage.display}/hr, full-time pay is ${money(stats.annual)} gross a year. That is ${federalNote} the $7.25 federal minimum. ${stateFloorNote} Typical roles include ${roles}.`,
+			},
+		};
+	}
+	if (wage.rate < 25) {
+		const roles =
+			'administrative assistant, delivery driver, medical assistant, warehouse lead, customer service representative, and entry-level dispatcher';
+		return {
+			label: 'Early-career & skilled-support tier',
+			meta: 'Early-career pay with 1-bedroom rent math, overtime impact, and admin, delivery, medical-support, and warehouse-lead roles.',
+			paragraphs: [
+				`At ${wage.display}/hr, gross annual pay is ${money(stats.annual)}. A 1-bedroom in a moderate-cost US city often rents for $1,200 to $1,600 a month. The 30% rent target here is ${money(rentCap)} a month, so a one-bedroom is comfortable only where local rents stay near that line; otherwise plan on a roommate or a cheaper neighborhood.`,
+				`Five overtime hours a week at 1.5x adds ${money(fiveHoursOvertime)} weekly, or ${money(fiveOvertimeAnnual)} a year before taxes. That lifts gross annual pay to ${money(weeklyWithFiveOvertime * 52)}. ${nextMilestoneText}`,
+				`Typical roles include ${roles}. A CDL, medical-assistant credential, or warehouse leadership role is a common next step.`,
+				`The landlord's 3x screen allows ${money(landlordRentCap)} a month, but the 30% target is ${money(rentCap)}. The gap of ${money(landlordRentCap - rentCap)} a month is money for utilities, food, and savings, not extra rent.`,
+			],
+			faq: {
+				question: `Is ${wage.display} an hour enough for a 1-bedroom apartment?`,
+				answer: `At ${wage.display}/hr, gross monthly pay is ${money(stats.monthly)} and estimated monthly take-home is ${money(netMonthly)}. The 30% rent target is ${money(rentCap)} a month, while a landlord's 3x gross screen allows ${money(landlordRentCap)}. Five overtime hours a week adds ${money(fiveOvertimeAnnual)} a year before taxes.`,
+			},
+		};
+	}
+	if (wage.rate < 36) {
+		const roles =
+			'licensed practical nurse, electrician, HVAC technician, dental hygienist, bookkeeper, and welder';
+		return {
+			label: 'Mid-career & skilled-trade tier',
+			meta: 'Mid-career skilled-trade pay vs. the $50,000 US median, with no-state-tax vs high-tax take-home differences.',
+			paragraphs: [
+				`At ${wage.display}/hr, ${money(stats.annual)} gross is ${medianNote} the $50,000 US median individual-income benchmark. At this level, certification and specialty pay usually move the number more than extra hours.`,
+				`State tax changes the result. Estimated annual take-home is ${money(noStateNetAnnual)} in a 0% state such as Texas or Florida, ${money(moderateStateNetAnnual)} at a moderate 5.5% rate, and ${money(highStateNetAnnual)} in a high-tax state at 8.5%. The high-tax estimate is ${money(stateTaxGap)} less per year than the no-state estimate.`,
+				`Typical roles include ${roles}. Licenses, safety certifications, and specialty endorsements are the quickest route to the next bracket.`,
+				`Five overtime hours a week at 1.5x adds ${money(fiveOvertimeAnnual)} a year at this rate. ${nextMilestoneText}`,
+			],
+			faq: {
+				question: `How does ${wage.display} an hour compare with the median US income?`,
+				answer: `At ${wage.display}/hr, annual gross pay is ${money(stats.annual)}, which is ${medianNote} the $50,000 median individual-income benchmark. Estimated annual take-home ranges from ${money(highStateNetAnnual)} in a high-tax state to ${money(noStateNetAnnual)} in a no-state-tax state, a difference of ${money(stateTaxGap)}.`,
+			},
+		};
+	}
+	const roles =
+		'registered nurse, software or IT specialist, project manager, senior electrician or plumber, and senior technician';
+	return {
+		label: 'Professional & specialist tier',
+		meta: 'Professional pay with federal bracket impact, 28/36 mortgage readiness, and nursing, IT, project-management, and senior-trade roles.',
+		paragraphs: [
+			`At ${wage.display}/hr, ${money(stats.annual)} gross puts a single filer in the ${percent(federalMarginalRate)} federal marginal bracket after the $15,000 standard deduction. The estimated effective federal rate is ${percent(federalEffectiveRate)}, before FICA and state tax.`,
+			`The 28/36 rule caps housing at ${money(mortgageHousingCap)} a month and total debt at ${money(mortgageDebtCap)} a month. At this income a mortgage may be workable, but the down payment, credit score, and existing debt decide approval more than the hourly rate.`,
+			`Typical roles include ${roles}. High-skill hourly work often comes with overtime, travel, or on-call premiums, so compare the whole package rather than base pay alone.`,
+			`State tax still matters. The estimated annual take-home gap between a 0% state and an 8.5% high-tax state is ${money(stateTaxGap)} at this rate. ${nextMilestoneText}`,
+		],
+		faq: {
+			question: `Can I buy a home at ${wage.display} an hour?`,
+			answer: `At ${wage.display}/hr, gross monthly pay is ${money(stats.monthly)}. The 28/36 rule allows up to ${money(mortgageHousingCap)} a month for housing and ${money(mortgageDebtCap)} a month for total debt. Estimated annual take-home is ${money(noStateNetAnnual)} in a 0% state and ${money(highStateNetAnnual)} at an 8.5% state rate.`,
+		},
+	};
+})();
 
 const periods = [
 	{ label: 'Daily', note: '8-hour day', value: stats.daily },
@@ -154,7 +203,7 @@ const scheduleRows = [
 });
 
 const title = `${wage.display} an Hour is How Much a Year? (Gross & Net After Taxes)`;
-const description = `At ${wage.display} an hour, full-time pay is ${money(stats.annual)} a year or ${money(stats.biWeekly)} bi-weekly. See gross and after-tax pay by day, week, month, overtime, and 24-hour shift rates.`;
+const description = `${wage.display}/hr pays ${money(stats.annual)} gross and about ${money(netAnnual)} take-home a year. ${wageTier.meta}`;
 
 const breadcrumbs = [
 	{ label: 'Home', href: '/' },
@@ -182,6 +231,14 @@ const faqs = [
 	{
 		question: `Is ${wage.display} an hour a livable wage in the United States?`,
 		answer: `${wage.display} an hour is ${money(stats.annual)} a year at full-time hours, which is ${federalNote} the $7.25 federal minimum wage. ${stateFloorNote} Using the 30% rent affordability rule, monthly rent should stay at or below ${money(rentCap)}. Whether the wage is livable depends on location, household size, benefits, and local housing costs.`,
+	},
+	{
+		question: wageTier.faq.question,
+		answer: wageTier.faq.answer,
+	},
+	{
+		question: `How much does state tax change take-home pay at ${wage.display} an hour?`,
+		answer: `At ${wage.display}/hr, annual gross pay is ${money(stats.annual)}. Estimated annual take-home is ${money(noStateNetAnnual)} in a 0% state-income-tax state such as Texas or Florida, ${money(moderateStateNetAnnual)} at a moderate 5.5% state rate, and ${money(highStateNetAnnual)} at an 8.5% high-tax state rate. The high-tax estimate is ${money(stateTaxGap)} less per year than the no-state estimate. These figures include federal income tax and 7.65% FICA and are planning estimates, not tax advice.`,
 	},
 ];
 ---
@@ -301,6 +358,36 @@ const faqs = [
 				state income tax. Actual withholding depends on filing status, deductions, and
 				location.
 			</p>
+
+			<div class="state-tax-summary">
+				<div class="state-tax-head">
+					<div>
+						<span class="mono">State tax comparison</span>
+						<h3>{wage.display}/hr annual take-home by state tax profile</h3>
+					</div>
+					<p>
+						High-tax states leave {money(stateTaxGap)} less a year than 0% states at this
+						wage.
+					</p>
+				</div>
+				<div class="state-tax-grid">
+					<article class="state-tax-card">
+						<span class="mono">0% state tax</span>
+						<strong>{money(noStateNetAnnual)}<span>/yr</span></strong>
+						<p>TX, FL, WA, NV, TN · includes federal + 7.65% FICA</p>
+					</article>
+					<article class="state-tax-card">
+						<span class="mono">Moderate · ~5.5%</span>
+						<strong>{money(moderateStateNetAnnual)}<span>/yr</span></strong>
+						<p>NY, VA, GA, NC · includes federal + FICA + state</p>
+					</article>
+					<article class="state-tax-card">
+						<span class="mono">High · ~8.5%</span>
+						<strong>{money(highStateNetAnnual)}<span>/yr</span></strong>
+						<p>CA, NJ, OR, MN · includes federal + FICA + state</p>
+					</article>
+				</div>
+			</div>
 		</div>
 	</section>
 
@@ -941,6 +1028,80 @@ const faqs = [
 		text-underline-offset: 3px;
 	}
 
+	.state-tax-summary {
+		margin-top: 14px;
+		padding: 18px 20px;
+		border: 1px solid var(--hairline);
+		border-radius: 14px;
+		background: var(--canvas-elevated);
+	}
+
+	.state-tax-head {
+		display: flex;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 20px;
+	}
+
+	.state-tax-head h3 {
+		margin: 6px 0 0;
+		font-size: 18px;
+		font-weight: 600;
+		letter-spacing: -0.35px;
+	}
+
+	.state-tax-head p {
+		max-width: 360px;
+		margin: 0;
+		text-align: right;
+		font-size: 13px;
+		line-height: 20px;
+		color: var(--body);
+	}
+
+	.state-tax-grid {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 10px;
+		margin-top: 14px;
+	}
+
+	.state-tax-card {
+		display: flex;
+		flex-direction: column;
+		gap: 5px;
+		padding: 14px;
+		border: 1px solid var(--hairline-soft);
+		border-radius: 10px;
+	}
+
+	.state-tax-card .mono {
+		color: var(--mute);
+	}
+
+	.state-tax-card strong {
+		font-size: 20px;
+		font-weight: 600;
+		letter-spacing: -0.5px;
+		color: var(--ink);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.state-tax-card strong span {
+		margin-left: 2px;
+		font-size: 12px;
+		font-weight: 500;
+		letter-spacing: 0;
+		color: var(--mute);
+	}
+
+	.state-tax-card p {
+		margin: 0;
+		font-size: 11px;
+		line-height: 16px;
+		color: var(--mute);
+	}
+
 	.rate-cards {
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1118,6 +1279,16 @@ const faqs = [
 		.table-head .hint {
 			text-align: left;
 		}
+
+		.state-tax-head {
+			align-items: flex-start;
+			flex-direction: column;
+			gap: 8px;
+		}
+
+		.state-tax-head p {
+			text-align: left;
+		}
 	}
 
 	@media (max-width: 640px) {
@@ -1157,7 +1328,8 @@ const faqs = [
 
 		.rate-cards,
 		.nearby-grid,
-		.pager {
+		.pager,
+		.state-tax-grid {
 			grid-template-columns: 1fr;
 		}
 
