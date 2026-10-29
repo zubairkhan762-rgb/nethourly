@@ -12,6 +12,99 @@ export const TAX_SCENARIOS = {
 
 export type TaxScenario = keyof typeof TAX_SCENARIOS;
 
+export const STATE_TAX_PROFILES = {
+  noState: {
+    label: 'No state tax',
+    states: 'TX, FL, WA, NV, TN',
+    stateRate: 0,
+  },
+  lowState: {
+    label: 'Low/flat state tax',
+    states: 'PA, IL, IN, CO',
+    stateRate: 0.04,
+  },
+  moderateState: {
+    label: 'Moderate state tax',
+    states: 'NY, VA, GA, NC',
+    stateRate: 0.055,
+  },
+  highState: {
+    label: 'High state tax',
+    states: 'CA, NJ, OR, MN',
+    stateRate: 0.085,
+  },
+} as const;
+
+export type StateTaxProfile = keyof typeof STATE_TAX_PROFILES;
+
+const FEDERAL_STANDARD_DEDUCTION = 15000;
+
+const FEDERAL_BRACKETS = [
+  { upTo: 11925, rate: 0.1 },
+  { upTo: 48475, rate: 0.12 },
+  { upTo: 103350, rate: 0.22 },
+  { upTo: 197300, rate: 0.24 },
+  { upTo: 250525, rate: 0.32 },
+  { upTo: 626350, rate: 0.35 },
+  { upTo: Number.POSITIVE_INFINITY, rate: 0.37 },
+] as const;
+
+export function estimateFederalIncomeTax(annualGross: number): number {
+  const taxableIncome = Math.max(
+    0,
+    (Number.isFinite(annualGross) ? annualGross : 0) - FEDERAL_STANDARD_DEDUCTION,
+  );
+
+  let tax = 0;
+  let previous = 0;
+
+  for (const bracket of FEDERAL_BRACKETS) {
+    const amount = Math.min(taxableIncome, bracket.upTo) - previous;
+    if (amount <= 0) break;
+    tax += amount * bracket.rate;
+    previous = bracket.upTo;
+    if (taxableIncome <= bracket.upTo) break;
+  }
+
+  return tax;
+}
+
+export interface TakeHomeEstimate {
+  federalTax: number;
+  stateTax: number;
+  ficaTax: number;
+  totalTax: number;
+  federalRate: number;
+  stateRate: number;
+  ficaRate: number;
+  totalRate: number;
+  netAnnual: number;
+}
+
+export function estimateTakeHome(
+  annualGross: number,
+  profileKey: StateTaxProfile,
+): TakeHomeEstimate {
+  const gross = Math.max(0, Number.isFinite(annualGross) ? annualGross : 0);
+  const profile = STATE_TAX_PROFILES[profileKey] ?? STATE_TAX_PROFILES.noState;
+  const federalTax = estimateFederalIncomeTax(gross);
+  const stateTax = gross * profile.stateRate;
+  const ficaTax = gross * FICA_RATE;
+  const totalTax = federalTax + stateTax + ficaTax;
+
+  return {
+    federalTax,
+    stateTax,
+    ficaTax,
+    totalTax,
+    federalRate: gross > 0 ? federalTax / gross : 0,
+    stateRate: profile.stateRate,
+    ficaRate: FICA_RATE,
+    totalRate: gross > 0 ? totalTax / gross : 0,
+    netAnnual: gross - totalTax,
+  };
+}
+
 export interface StandardInput {
   hourlyRate: number;
   hoursPerWeek: number;

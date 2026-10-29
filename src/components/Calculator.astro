@@ -1,7 +1,9 @@
 ---
 import {
 	calculateStandard,
+	FICA_RATE,
 	getFrequencyRows,
+	STATE_TAX_PROFILES,
 	TAX_SCENARIOS,
 } from '../lib/payroll';
 
@@ -20,7 +22,11 @@ const initialInput = {
 
 const initial = calculateStandard(initialInput);
 const initialTax = TAX_SCENARIOS.standard;
+const initialFicaRate = Math.min(FICA_RATE, initialTax.rate);
 const initialTaxAmount = initial.weeklyGross * initialTax.rate;
+const initialFicaAmount = initial.weeklyGross * initialFicaRate;
+const initialFedStateAmount =
+	initial.weeklyGross * Math.max(0, initialTax.rate - initialFicaRate);
 const initialNetWeekly = initial.weeklyGross - initialTaxAmount;
 const initialRows = getFrequencyRows(initial, initialInput.hourlyRate, initialInput.weeksPerYear);
 
@@ -207,6 +213,11 @@ const hours = (value: number) =>
 				<label class="tax-select">
 					<span class="sr-only">Tax estimate</span>
 					<select id="tax-scenario" name="tax-scenario">
+						{Object.entries(STATE_TAX_PROFILES).map(([key, profile]) => (
+							<option value={`state:${key}`}>
+								Net · {profile.label} ({profile.states})
+							</option>
+						))}
 						<option value="standard" selected>Net · Standard (18%)</option>
 						<option value="gross">Gross pay (0%)</option>
 						<option value="fica">Net · FICA only (7.65%)</option>
@@ -220,6 +231,9 @@ const hours = (value: number) =>
 				<span class="result-label" id="result-label">Estimated take-home / week</span>
 				<strong class="result-value" id="net-weekly">{money(initialNetWeekly)}</strong>
 				<span class="result-note" id="result-note">After 18% estimated deductions · {money(initial.weeklyGross)} gross</span>
+				<span class="tax-line" id="tax-breakdown-line">
+					Gross: {money(initial.weeklyGross)} | FICA (7.65%): −{money(initialFicaAmount)} | Est. Fed &amp; State Tax: −{money(initialFedStateAmount)} | Take-Home Net: {money(initialNetWeekly)}
+				</span>
 			</div>
 
 			<div class="stat-grid">
@@ -304,8 +318,11 @@ const hours = (value: number) =>
 	import {
 		calculateShift,
 		calculateStandard,
+		FICA_RATE,
 		getFrequencyRows,
+		STATE_TAX_PROFILES,
 		TAX_SCENARIOS,
+		estimateTakeHome,
 	} from '../lib/payroll';
 
 	const root = document.getElementById('calculator');
@@ -378,8 +395,44 @@ const hours = (value: number) =>
 			}
 
 			const scenarioKey = byId('tax-scenario')?.value ?? 'standard';
-			const taxRate = TAX_SCENARIOS[scenarioKey]?.rate ?? TAX_SCENARIOS.standard.rate;
+			const stateKey = scenarioKey.startsWith('state:')
+				? scenarioKey.slice(6)
+				: '';
+			const stateProfile =
+				stateKey && stateKey in STATE_TAX_PROFILES
+					? STATE_TAX_PROFILES[stateKey as keyof typeof STATE_TAX_PROFILES]
+					: null;
+
+			let taxRate = TAX_SCENARIOS.standard.rate;
+			let ficaRate = Math.min(FICA_RATE, taxRate);
+			let fedStateRate = Math.max(0, taxRate - ficaRate);
+			let resultNote = '';
+
+			if (stateProfile) {
+				const estimate = estimateTakeHome(
+					result.annualGross,
+					stateKey as keyof typeof STATE_TAX_PROFILES,
+				);
+				taxRate = estimate.totalRate;
+				ficaRate = estimate.ficaRate;
+				fedStateRate = estimate.federalRate + estimate.stateRate;
+				resultNote = `Federal + ${percent(estimate.ficaRate)} FICA + ${percent(estimate.stateRate)} state · ${money(result.weeklyGross)} gross`;
+			} else {
+				const scenario =
+					TAX_SCENARIOS[scenarioKey as keyof typeof TAX_SCENARIOS] ??
+					TAX_SCENARIOS.standard;
+				taxRate = scenario.rate;
+				ficaRate = Math.min(FICA_RATE, taxRate);
+				fedStateRate = Math.max(0, taxRate - ficaRate);
+				resultNote =
+					taxRate === 0
+						? `No deductions applied · ${money(result.weeklyGross)} gross`
+						: `After ${percent(taxRate)} estimated deductions · ${money(result.weeklyGross)} gross`;
+			}
+
 			const taxAmount = result.weeklyGross * taxRate;
+			const ficaAmount = result.weeklyGross * ficaRate;
+			const fedStateAmount = result.weeklyGross * fedStateRate;
 			const netWeekly = result.weeklyGross - taxAmount;
 			const netAnnual = result.annualGross - result.annualGross * taxRate;
 
@@ -390,10 +443,9 @@ const hours = (value: number) =>
 
 			byId('result-label').textContent =
 				taxRate === 0 ? 'Estimated gross / week' : 'Estimated take-home / week';
-			byId('result-note').textContent =
-				taxRate === 0
-					? `No deductions applied · ${money(result.weeklyGross)} gross`
-					: `After ${percent(taxRate)} estimated deductions · ${money(result.weeklyGross)} gross`;
+			byId('result-note').textContent = resultNote;
+			byId('tax-breakdown-line').textContent =
+				`Gross: ${money(result.weeklyGross)} | FICA (7.65%): ${ficaAmount === 0 ? money(0) : `−${money(ficaAmount)}`} | Est. Fed & State Tax: ${fedStateAmount === 0 ? money(0) : `−${money(fedStateAmount)}`} | Take-Home Net: ${money(netWeekly)}`;
 
 			byId('regular-hours').textContent = `${hours(result.regularHours)} hrs`;
 			byId('regular-pay').textContent = money(result.regularPay);
@@ -796,6 +848,13 @@ const hours = (value: number) =>
 		font-size: 12px;
 		line-height: 16px;
 		color: var(--mute, #8f8f8f);
+	}
+
+	.tax-line {
+		font-size: 12px;
+		line-height: 17px;
+		color: var(--mute, #8f8f8f);
+		font-variant-numeric: tabular-nums;
 	}
 
 	.stat-grid {
