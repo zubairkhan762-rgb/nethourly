@@ -56,67 +56,40 @@ const percent = (value: number) =>
 				<h2 id="calculator-title">Your pay details</h2>
 			</div>
 
-			<label class="field">
-				<span class="field-label">Hourly rate</span>
-				<span class="control control-prefix">
-					<span class="affix" aria-hidden="true">$</span>
-					<input
-						id="hourly-rate"
-						name="hourly-rate"
-						type="number"
-						inputmode="decimal"
-						min="0"
-						max="10000"
-						step="0.01"
-						value={initialInput.hourlyRate}
-					/>
-				</span>
-				<span class="hint">Base rate before overtime premiums or deductions.</span>
-			</label>
-
-			<div class="field diff-field">
-				<div class="diff-head">
-					<label class="field-label" for="shift-differential">Shift differential (+$/hr)</label>
-					<span class="control control-prefix diff-control">
-						<span class="affix" aria-hidden="true">+$</span>
+			<div class="primary-fields">
+				<label class="field">
+					<span class="field-label">Hourly wage</span>
+					<span class="control control-prefix">
+						<span class="affix" aria-hidden="true">$</span>
 						<input
-							id="shift-differential"
-							name="shift-differential"
+							id="hourly-rate"
+							name="hourly-rate"
 							type="number"
 							inputmode="decimal"
 							min="0"
-							max="50"
-							step="0.25"
-							value="0"
+							max="10000"
+							step="0.01"
+							value={initialInput.hourlyRate}
 						/>
 					</span>
-				</div>
-				<div class="diff-pills" role="group" aria-label="Shift differential presets">
-					<button type="button" class="diff-pill" data-differential="0" aria-pressed="true">$0</button>
-					<button type="button" class="diff-pill" data-differential="1.5" aria-pressed="false">+$1.50/hr</button>
-					<button type="button" class="diff-pill" data-differential="3" aria-pressed="false">+$3/hr</button>
-				</div>
-				<span class="hint">Optional night or weekend add-on. Applied before overtime and shift pay.</span>
-			</div>
+					<div class="wage-pills" role="group" aria-label="Quick-select hourly wage">
+						{[15, 20, 25, 30, 35, 40].map((value) => (
+							<button
+								type="button"
+								class="wage-pill"
+								data-wage={value}
+								aria-pressed={value === initialInput.hourlyRate ? 'true' : 'false'}
+							>
+								${value}
+							</button>
+						))}
+					</div>
+					<span class="hint">Base rate before overtime premiums or deductions.</span>
+				</label>
 
-			<fieldset class="field mode-field">
-				<legend class="field-label">Shift type</legend>
-				<div class="segmented">
-					<label>
-						<input type="radio" name="shift-mode" value="standard" checked />
-						<span>Standard week</span>
-					</label>
-					<label>
-						<input type="radio" name="shift-mode" value="shift" />
-						<span>24-hour shift</span>
-					</label>
-				</div>
-			</fieldset>
-
-			<div class="field-stack" data-panel="standard">
-				<div class="field-row">
+				<div class="field-row primary-row">
 					<label class="field">
-						<span class="field-label">Hours per week</span>
+						<span class="field-label">Regular hours per week</span>
 						<span class="control control-suffix">
 							<input
 								id="hours-week"
@@ -130,162 +103,240 @@ const percent = (value: number) =>
 							/>
 							<span class="affix" aria-hidden="true">hrs</span>
 						</span>
+						<span class="hint">Default 40. Hours above 40 use the overtime premium.</span>
 					</label>
+
 					<label class="field">
-						<span class="field-label">Double-time hours</span>
-						<span class="control control-suffix">
-							<input
-								id="double-time"
-								name="double-time"
-								type="number"
-								inputmode="decimal"
-								min="0"
-								max="168"
-								step="0.5"
-								value={initialInput.doubleTimeHours}
-							/>
-							<span class="affix" aria-hidden="true">hrs</span>
+						<span class="field-label">US state / tax profile</span>
+						<span class="tax-select">
+							<span class="sr-only">Tax estimate</span>
+							<select id="tax-scenario" name="tax-scenario">
+								{Object.entries(STATE_TAX_PROFILES).map(([key, profile]) => (
+									<option value={`state:${key}`}>
+										Net · {profile.label} ({profile.states})
+									</option>
+								))}
+								<option value="standard" selected>Net · Standard (18%)</option>
+								<option value="gross">Gross pay (0%)</option>
+								<option value="fica">Net · FICA only (7.65%)</option>
+								<option value="highTax">Net · High-tax state (24%)</option>
+								<option value="noIncomeTax">Net · No income tax (15%)</option>
+							</select>
 						</span>
 					</label>
 				</div>
-				<p class="hint">Double-time hours sit inside the weekly total — holidays or California shifts past 12 hours.</p>
-				<div class="field ot-field">
-					<div class="ot-head">
-						<label class="field-label" for="overtime-hours">Overtime hours</label>
-						<span class="control control-suffix ot-control">
+			</div>
+
+			<details class="advanced" id="advanced-options">
+				<summary class="advanced-summary">
+					<span class="advanced-label">
+						<span class="advanced-plus" aria-hidden="true">+</span>
+						Overtime, Shift Bonus &amp; Weeks/Yr (Optional)
+					</span>
+					<span class="advanced-status" id="advanced-status" role="status" aria-live="polite" hidden>
+						Active
+					</span>
+				</summary>
+
+				<div class="advanced-body">
+					<fieldset class="field mode-field">
+						<legend class="field-label">Shift type</legend>
+						<div class="segmented">
+							<label>
+								<input type="radio" name="shift-mode" value="standard" checked />
+								<span>Standard week</span>
+							</label>
+							<label>
+								<input type="radio" name="shift-mode" value="shift" />
+								<span>24-hour shift</span>
+							</label>
+						</div>
+					</fieldset>
+
+					<div class="field diff-field">
+						<div class="diff-head">
+							<label class="field-label" for="shift-differential">Shift differential (+$/hr)</label>
+							<span class="control control-prefix diff-control">
+								<span class="affix" aria-hidden="true">+$</span>
+								<input
+									id="shift-differential"
+									name="shift-differential"
+									type="number"
+									inputmode="decimal"
+									min="0"
+									max="50"
+									step="0.25"
+									value="0"
+								/>
+							</span>
+						</div>
+						<div class="diff-pills" role="group" aria-label="Shift differential presets">
+							<button type="button" class="diff-pill" data-differential="0" aria-pressed="true">$0</button>
+							<button type="button" class="diff-pill" data-differential="1.5" aria-pressed="false">+$1.50/hr</button>
+							<button type="button" class="diff-pill" data-differential="3" aria-pressed="false">+$3/hr</button>
+						</div>
+						<span class="hint">Optional night or weekend add-on. Applied before overtime and shift pay.</span>
+					</div>
+
+					<div class="field-stack" data-panel="standard">
+						<div class="field ot-field">
+							<div class="ot-head">
+								<label class="field-label" for="overtime-hours">Overtime hours</label>
+								<span class="control control-suffix ot-control">
+									<input
+										id="overtime-hours"
+										name="overtime-hours"
+										type="number"
+										inputmode="decimal"
+										min="0"
+										max="40"
+										step="0.5"
+										value={initial.overtimeHours}
+										aria-label="Overtime hours"
+									/>
+									<span class="affix" aria-hidden="true">hrs</span>
+								</span>
+							</div>
 							<input
-								id="overtime-hours"
-								name="overtime-hours"
-								type="number"
-								inputmode="decimal"
+								id="overtime-slider"
+								name="overtime-slider"
+								type="range"
 								min="0"
 								max="40"
 								step="0.5"
 								value={initial.overtimeHours}
-								aria-label="Overtime hours"
+								aria-label="Overtime hours slider, 0 to 40 hours"
 							/>
-							<span class="affix" aria-hidden="true">hrs</span>
-						</span>
-					</div>
-					<input
-						id="overtime-slider"
-						name="overtime-slider"
-						type="range"
-						min="0"
-						max="40"
-						step="0.5"
-						value={initial.overtimeHours}
-						aria-label="Overtime hours slider, 0 to 40 hours"
-					/>
-					<span class="range-labels"><span>0 hrs</span><span>40 hrs</span></span>
-				</div>
-			</div>
+							<span class="range-labels"><span>0 hrs</span><span>40 hrs</span></span>
+						</div>
 
-			<div class="field-stack" data-panel="shift" hidden>
-				<div class="field-row">
-					<label class="field">
-						<span class="field-label">Shifts per week</span>
-						<span class="control control-suffix">
-							<input
-								id="shifts-week"
-								name="shifts-week"
-								type="number"
-								inputmode="decimal"
-								min="0"
-								max="7"
-								step="1"
-								value="5"
-							/>
-							<span class="affix" aria-hidden="true">shifts</span>
-						</span>
-					</label>
-					<label class="field">
-						<span class="field-label">Sleep deduction</span>
-						<span class="control control-suffix">
-							<input
-								id="sleep-deduction"
-								name="sleep-deduction"
-								type="number"
-								inputmode="decimal"
-								min="0"
-								max="8"
-								step="1"
-								value="8"
-							/>
-							<span class="affix" aria-hidden="true">hrs</span>
-						</span>
-					</label>
-				</div>
-				<div class="field-row">
-					<label class="field">
-						<span class="field-label">Meal deduction</span>
-						<span class="control control-suffix">
-							<input
-								id="meal-deduction"
-								name="meal-deduction"
-								type="number"
-								inputmode="decimal"
-								min="0"
-								max="3"
-								step="1"
-								value="3"
-							/>
-							<span class="affix" aria-hidden="true">hrs</span>
-						</span>
-					</label>
-					<div class="field">
-						<span class="field-label">Payable per shift</span>
-						<span class="readout" id="payable-per-shift">13 hrs</span>
+						<div class="field-row">
+							<label class="field">
+								<span class="field-label">Double-time hours</span>
+								<span class="control control-suffix">
+									<input
+										id="double-time"
+										name="double-time"
+										type="number"
+										inputmode="decimal"
+										min="0"
+										max="168"
+										step="0.5"
+										value={initialInput.doubleTimeHours}
+									/>
+									<span class="affix" aria-hidden="true">hrs</span>
+								</span>
+							</label>
+							<fieldset class="field rate-field">
+								<legend class="field-label">Overtime rate</legend>
+								<div class="segmented segmented-compact">
+									<label>
+										<input type="radio" name="overtime-rate" value="1.5" checked />
+										<span>1.5×</span>
+									</label>
+									<label>
+										<input type="radio" name="overtime-rate" value="2" />
+										<span>2×</span>
+									</label>
+								</div>
+							</fieldset>
+						</div>
+						<p class="hint">Double-time hours sit inside the weekly total — holidays or California shifts past 12 hours.</p>
 					</div>
-				</div>
-				<label class="switch-row">
-					<input id="daily-overtime" name="daily-overtime" type="checkbox" />
-					<span class="switch" aria-hidden="true"></span>
-					<span class="switch-copy">
-						<strong>CA-style daily overtime</strong>
-						<small>First 8 payable hours at 1×, hours 8–12 at 1.5×, beyond 12 at 2×.</small>
-					</span>
-				</label>
-				<p class="hint">Sleep time is excludable up to 8 hours only with 5+ hours of uninterrupted sleep. Meals are excludable up to 3 duty-free hours.</p>
-			</div>
 
-			<label class="field field-weeks">
-				<span class="field-label">Weeks worked per year</span>
-				<span class="control control-suffix">
-					<input
-						id="weeks-year"
-						name="weeks-year"
-						type="number"
-						inputmode="decimal"
-						min="1"
-						max="52"
-						step="1"
-						value={initialInput.weeksPerYear}
-					/>
-					<span class="affix" aria-hidden="true">weeks</span>
-				</span>
-				<span class="hint">Use 52 for a full year, or fewer to account for unpaid leave.</span>
-			</label>
+					<div class="field-stack" data-panel="shift" hidden>
+						<div class="field-row">
+							<label class="field">
+								<span class="field-label">Shifts per week</span>
+								<span class="control control-suffix">
+									<input
+										id="shifts-week"
+										name="shifts-week"
+										type="number"
+										inputmode="decimal"
+										min="0"
+										max="7"
+										step="1"
+										value="5"
+									/>
+									<span class="affix" aria-hidden="true">shifts</span>
+								</span>
+							</label>
+							<label class="field">
+								<span class="field-label">Sleep deduction</span>
+								<span class="control control-suffix">
+									<input
+										id="sleep-deduction"
+										name="sleep-deduction"
+										type="number"
+										inputmode="decimal"
+										min="0"
+										max="8"
+										step="1"
+										value="8"
+									/>
+									<span class="affix" aria-hidden="true">hrs</span>
+								</span>
+							</label>
+						</div>
+						<div class="field-row">
+							<label class="field">
+								<span class="field-label">Meal deduction</span>
+								<span class="control control-suffix">
+									<input
+										id="meal-deduction"
+										name="meal-deduction"
+										type="number"
+										inputmode="decimal"
+										min="0"
+										max="3"
+										step="1"
+										value="3"
+									/>
+									<span class="affix" aria-hidden="true">hrs</span>
+								</span>
+							</label>
+							<div class="field">
+								<span class="field-label">Payable per shift</span>
+								<span class="readout" id="payable-per-shift">13 hrs</span>
+							</div>
+						</div>
+						<label class="switch-row">
+							<input id="daily-overtime" name="daily-overtime" type="checkbox" />
+							<span class="switch" aria-hidden="true"></span>
+							<span class="switch-copy">
+								<strong>CA-style daily overtime</strong>
+								<small>First 8 payable hours at 1×, hours 8–12 at 1.5×, beyond 12 at 2×.</small>
+							</span>
+						</label>
+						<p class="hint">Sleep time is excludable up to 8 hours only with 5+ hours of uninterrupted sleep. Meals are excludable up to 3 duty-free hours.</p>
+					</div>
+
+					<label class="field field-weeks">
+						<span class="field-label">Weeks worked per year</span>
+						<span class="control control-suffix">
+							<input
+								id="weeks-year"
+								name="weeks-year"
+								type="number"
+								inputmode="decimal"
+								min="1"
+								max="52"
+								step="1"
+								value={initialInput.weeksPerYear}
+							/>
+							<span class="affix" aria-hidden="true">weeks</span>
+						</span>
+						<span class="hint">Use 52 for a full year, or fewer to account for unpaid leave.</span>
+					</label>
+				</div>
+			</details>
 		</form>
 
 		<div class="panel result-panel">
 			<div class="panel-head result-head">
 				<span class="mono">02 — Result</span>
-				<label class="tax-select">
-					<span class="sr-only">Tax estimate</span>
-					<select id="tax-scenario" name="tax-scenario">
-						{Object.entries(STATE_TAX_PROFILES).map(([key, profile]) => (
-							<option value={`state:${key}`}>
-								Net · {profile.label} ({profile.states})
-							</option>
-						))}
-						<option value="standard" selected>Net · Standard (18%)</option>
-						<option value="gross">Gross pay (0%)</option>
-						<option value="fica">Net · FICA only (7.65%)</option>
-						<option value="highTax">Net · High-tax state (24%)</option>
-						<option value="noIncomeTax">Net · No income tax (15%)</option>
-					</select>
-				</label>
+				<span class="result-live">Live estimate</span>
 			</div>
 
 			<div class="headline" aria-live="polite">
@@ -354,36 +405,6 @@ const percent = (value: number) =>
 				</div>
 			</div>
 
-			<div class="breakdown">
-				<p class="pay-split" id="pay-split" hidden>
-					Regular Pay: {money(initial.regularPay)} | Overtime Pay (1.5x/2x): +{money(initial.overtimePay + initial.doubleTimePay)} | Shift Diff: +{money(0)}
-				</p>
-				<div class="line">
-					<span>Regular <em id="regular-hours">{hours(initial.regularHours)} hrs</em></span>
-					<span id="regular-pay">{money(initial.regularPay)}</span>
-				</div>
-				<div class="line">
-					<span>Overtime (1.5×) <em id="overtime-hours">{hours(initial.overtimeHours)} hrs</em></span>
-					<span id="overtime-pay">{money(initial.overtimePay)}</span>
-				</div>
-				<div class="line">
-					<span>Double time (2×) <em id="double-hours">{hours(initial.doubleTimeHours)} hrs</em></span>
-					<span id="double-pay">{money(initial.doubleTimePay)}</span>
-				</div>
-				<div class="line" id="shift-diff-line" hidden>
-					<span>Shift differential <em id="shift-diff-rate">+$0.00/hr</em></span>
-					<span id="shift-diff-pay">+{money(0)}</span>
-				</div>
-				<div class="line line-tax">
-					<span>Estimated taxes</span>
-					<span id="tax-amount">−{money(initialTaxAmount)}</span>
-				</div>
-				<div class="line line-net">
-					<span>Net weekly</span>
-					<span id="net-weekly-mini">{money(initialNetWeekly)}</span>
-				</div>
-			</div>
-
 			<div class="budget-card">
 				<div class="budget-head">
 					<span class="mono">Monthly budget</span>
@@ -415,6 +436,36 @@ const percent = (value: number) =>
 						<span class="budget-label">Savings &amp; Investing · 20%</span>
 						<strong id="budget-savings">{money(initialMonthlyNet * 0.2)}/mo</strong>
 					</div>
+				</div>
+			</div>
+
+			<div class="breakdown">
+				<p class="pay-split" id="pay-split" hidden>
+					Regular Pay: {money(initial.regularPay)} | Overtime Pay (1.5x/2x): +{money(initial.overtimePay + initial.doubleTimePay)} | Shift Diff: +{money(0)}
+				</p>
+				<div class="line">
+					<span>Regular <em id="regular-hours">{hours(initial.regularHours)} hrs</em></span>
+					<span id="regular-pay">{money(initial.regularPay)}</span>
+				</div>
+				<div class="line">
+					<span><span id="overtime-rate-label">Overtime (1.5×)</span> <em id="overtime-hours">{hours(initial.overtimeHours)} hrs</em></span>
+					<span id="overtime-pay">{money(initial.overtimePay)}</span>
+				</div>
+				<div class="line">
+					<span>Double time (2×) <em id="double-hours">{hours(initial.doubleTimeHours)} hrs</em></span>
+					<span id="double-pay">{money(initial.doubleTimePay)}</span>
+				</div>
+				<div class="line" id="shift-diff-line" hidden>
+					<span>Shift differential <em id="shift-diff-rate">+$0.00/hr</em></span>
+					<span id="shift-diff-pay">+{money(0)}</span>
+				</div>
+				<div class="line line-tax">
+					<span>Estimated taxes</span>
+					<span id="tax-amount">−{money(initialTaxAmount)}</span>
+				</div>
+				<div class="line line-net">
+					<span>Net weekly</span>
+					<span id="net-weekly-mini">{money(initialNetWeekly)}</span>
 				</div>
 			</div>
 
@@ -523,6 +574,47 @@ const percent = (value: number) =>
 			if (sliderInput && sliderInput !== skip) sliderInput.value = String(normalized);
 		};
 
+		const getOvertimeRate = () => {
+			const checked = form.querySelector('input[name="overtime-rate"]:checked');
+			return Number.parseFloat(checked?.value ?? '1.5') === 2 ? 2 : 1.5;
+		};
+
+		const syncWagePills = (value) => {
+			form.querySelectorAll('[data-wage]').forEach((button) => {
+				const pillValue = Number.parseFloat(button.dataset.wage ?? '');
+				button.setAttribute('aria-pressed', pillValue === value ? 'true' : 'false');
+			});
+		};
+
+		const syncAdvancedStatus = () => {
+			const status = byId('advanced-status');
+			if (!status) return;
+
+			const overtimeHours = readNumber(byId('overtime-hours'), 0, 40, 0);
+			const doubleTimeHours = readNumber(byId('double-time'), 0, 168, 0);
+			const differential = readNumber(byId('shift-differential'), 0, 50, 0);
+			const weeksPerYear = readNumber(byId('weeks-year'), 1, 52, 52);
+
+			const active =
+				overtimeHours > 0 ||
+				doubleTimeHours > 0 ||
+				differential > 0 ||
+				weeksPerYear !== 52 ||
+				getOvertimeRate() === 2 ||
+				activeMode() === 'shift';
+
+			status.hidden = !active;
+			status.textContent = active ? 'Active' : 'Optional';
+		};
+
+		const setMode = (mode) => {
+			const radio = form.querySelector(
+				`input[name="shift-mode"][value="${mode}"]`,
+			);
+			if (radio) radio.checked = true;
+			syncPanels();
+		};
+
 		const render = (event) => {
 			const target = event?.target;
 			const mode = activeMode();
@@ -571,6 +663,7 @@ const percent = (value: number) =>
 					hoursPerWeek: readNumber(byId('hours-week'), 0, 168, 40),
 					doubleTimeHours: readNumber(byId('double-time'), 0, 168, 0),
 					weeksPerYear,
+					overtimeRate: getOvertimeRate(),
 				};
 
 				baseResult = calculateStandard({
@@ -580,10 +673,12 @@ const percent = (value: number) =>
 				result = calculateStandard({ ...standardInput, hourlyRate });
 			}
 
+			syncWagePills(baseHourlyRate);
 			syncDifferentialPills(differential);
 			if (mode === 'standard') {
 				syncOvertimeInputs(result.overtimeHours, target);
 			}
+			syncAdvancedStatus();
 
 			const scenarioKey = byId('tax-scenario')?.value ?? 'standard';
 			const stateKey = scenarioKey.startsWith('state:')
@@ -668,7 +763,19 @@ const percent = (value: number) =>
 
 			byId('regular-hours').textContent = `${hours(baseResult.regularHours)} hrs`;
 			byId('regular-pay').textContent = money(baseResult.regularPay);
-			byId('overtime-hours').textContent = `${hours(baseResult.overtimeHours)} hrs`;
+			const overtimeRateLabel = byId('overtime-rate-label');
+			if (overtimeRateLabel) {
+				overtimeRateLabel.textContent =
+					mode === 'standard'
+						? `Overtime (${getOvertimeRate() === 2 ? '2' : '1.5'}×)`
+						: 'Overtime';
+			}
+			const overtimeHoursReadout = root.querySelector(
+				'.breakdown #overtime-hours',
+			);
+			if (overtimeHoursReadout) {
+				overtimeHoursReadout.textContent = `${hours(baseResult.overtimeHours)} hrs`;
+			}
 			byId('overtime-pay').textContent = money(baseResult.overtimePay);
 			byId('double-hours').textContent = `${hours(baseResult.doubleTimeHours)} hrs`;
 			byId('double-pay').textContent = money(baseResult.doubleTimePay);
@@ -725,6 +832,55 @@ const percent = (value: number) =>
 			});
 		});
 
+		form.querySelectorAll('[data-wage]').forEach((button) => {
+			button.addEventListener('click', () => {
+				const input = byId('hourly-rate');
+				if (!input) return;
+				input.value = button.dataset.wage ?? '';
+				render();
+			});
+		});
+
+		const pathname = window.location.pathname.replace(/\/+$/, '') || '/';
+		if (pathname === '/') {
+			document
+				.querySelectorAll(
+					'.site-header a[href="/overtime-calculator"], .site-header a[href="/24-hour-shift-calculator"]',
+				)
+				.forEach((link) => {
+					link.addEventListener('click', (event) => {
+						if (
+							event.defaultPrevented ||
+							event.button !== 0 ||
+							event.metaKey ||
+							event.ctrlKey ||
+							event.shiftKey ||
+							event.altKey
+						) {
+							return;
+						}
+
+						const isShift =
+							link.getAttribute('href') === '/24-hour-shift-calculator';
+						event.preventDefault();
+						setMode(isShift ? 'shift' : 'standard');
+
+						const advanced = byId('advanced-options');
+						if (advanced) advanced.open = true;
+						render();
+
+						advanced?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+						const focusTarget = isShift
+							? byId('sleep-deduction')
+							: byId('overtime-hours');
+						window.setTimeout(
+							() => focusTarget?.focus({ preventScroll: true }),
+							250,
+						);
+					});
+				});
+		}
+
 		root.addEventListener('input', render);
 		root.addEventListener('change', render);
 
@@ -757,6 +913,12 @@ const percent = (value: number) =>
 		flex-direction: column;
 		gap: 24px;
 		padding: 24px;
+	}
+
+	.primary-fields {
+		display: flex;
+		flex-direction: column;
+		gap: 18px;
 	}
 
 	.panel-head {
@@ -926,6 +1088,40 @@ const percent = (value: number) =>
 	}
 
 	.diff-pill[aria-pressed='true'] {
+		background: var(--ink, #171717);
+		border-color: var(--ink, #171717);
+		color: var(--on-ink);
+	}
+
+	.wage-pills {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+	}
+
+	.wage-pill {
+		appearance: none;
+		padding: 4px 11px;
+		border: 1px solid var(--hairline, #ebebeb);
+		border-radius: 100px;
+		background: var(--canvas-elevated);
+		font: inherit;
+		font-size: 12px;
+		font-weight: 500;
+		color: var(--body, #4d4d4d);
+		cursor: pointer;
+		transition:
+			background 0.15s ease,
+			border-color 0.15s ease,
+			color 0.15s ease;
+	}
+
+	.wage-pill:hover {
+		border-color: var(--hairline-strong, #d4d4d4);
+		color: var(--ink, #171717);
+	}
+
+	.wage-pill[aria-pressed='true'] {
 		background: var(--ink, #171717);
 		border-color: var(--ink, #171717);
 		color: var(--on-ink);
@@ -1107,6 +1303,113 @@ const percent = (value: number) =>
 		border-top: 1px solid var(--hairline-soft, #f2f2f2);
 	}
 
+	.rate-field {
+		margin: 0;
+		padding: 0;
+		border: 0;
+	}
+
+	.rate-field legend {
+		padding: 0;
+		margin-bottom: 6px;
+	}
+
+	.segmented-compact span {
+		height: 32px;
+		font-size: 13px;
+	}
+
+	.advanced {
+		border: 1px solid var(--hairline, #ebebeb);
+		border-radius: 12px;
+		background: var(--canvas, #fafafa);
+	}
+
+	.advanced[open] {
+		background: var(--canvas-elevated);
+	}
+
+	.advanced-summary {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 14px 16px;
+		border-radius: 11px;
+		font-size: 14px;
+		font-weight: 500;
+		letter-spacing: -0.28px;
+		color: var(--ink, #171717);
+		cursor: pointer;
+		list-style: none;
+		transition: background 0.15s ease;
+	}
+
+	.advanced-summary::-webkit-details-marker {
+		display: none;
+	}
+
+	.advanced-summary:hover {
+		background: var(--hairline-soft, #f2f2f2);
+	}
+
+	.advanced[open] .advanced-summary {
+		border-bottom: 1px solid var(--hairline-soft, #f2f2f2);
+		border-radius: 11px 11px 0 0;
+	}
+
+	.advanced-label {
+		display: inline-flex;
+		align-items: center;
+		gap: 9px;
+		min-width: 0;
+	}
+
+	.advanced-plus {
+		display: grid;
+		place-items: center;
+		flex: none;
+		width: 20px;
+		height: 20px;
+		border: 1px solid var(--hairline, #ebebeb);
+		border-radius: 50%;
+		font-size: 14px;
+		line-height: 1;
+		color: var(--mute, #8f8f8f);
+		transition: transform 0.2s ease;
+	}
+
+	.advanced-status {
+		flex: none;
+		padding: 3px 8px;
+		border: 1px solid var(--hairline, #ebebeb);
+		border-radius: 100px;
+		background: var(--canvas-elevated);
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: 10px;
+		font-weight: 600;
+		line-height: 14px;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+		color: var(--body, #4d4d4d);
+	}
+
+	.advanced-status[hidden] {
+		display: none;
+	}
+
+	.advanced-body {
+		display: flex;
+		flex-direction: column;
+		gap: 18px;
+		padding: 16px;
+	}
+
+	.advanced-body > .field-stack > .ot-field:first-child {
+		padding-top: 0;
+		border-top: 0;
+	}
+
 	.result-panel {
 		display: flex;
 		flex-direction: column;
@@ -1131,16 +1434,30 @@ const percent = (value: number) =>
 		gap: 12px;
 	}
 
+	.result-live {
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: 10px;
+		font-weight: 500;
+		line-height: 14px;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+		color: var(--mute, #8f8f8f);
+	}
+
+	.tax-select {
+		display: block;
+	}
+
 	.tax-select select {
 		appearance: none;
-		height: 32px;
-		max-width: 210px;
-		padding: 0 28px 0 10px;
+		width: 100%;
+		height: 40px;
+		padding: 0 30px 0 12px;
 		border: 1px solid var(--hairline, #ebebeb);
-		border-radius: 100px;
-		background: var(--input-bg) var(--select-arrow) no-repeat right 10px center;
+		border-radius: 6px;
+		background: var(--input-bg) var(--select-arrow) no-repeat right 12px center;
 		font: inherit;
-		font-size: 12px;
+		font-size: 13px;
 		font-weight: 500;
 		color: var(--ink, #171717);
 		cursor: pointer;

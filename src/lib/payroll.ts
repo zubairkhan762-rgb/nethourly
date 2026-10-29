@@ -123,6 +123,7 @@ export interface StandardInput {
   hoursPerWeek: number;
   doubleTimeHours: number;
   weeksPerYear: number;
+  overtimeRate?: number;
 }
 
 export interface ShiftInput {
@@ -164,9 +165,11 @@ function buildResult(
   overtimeHours: number,
   doubleTimeHours: number,
   weeksPerYear: number,
+  overtimeRate = 1.5,
 ): PayResult {
+  const overtimeMultiplier = overtimeRate === 2 ? 2 : 1.5;
   const regularPay = regularHours * hourlyRate;
-  const overtimePay = overtimeHours * hourlyRate * 1.5;
+  const overtimePay = overtimeHours * hourlyRate * overtimeMultiplier;
   const doubleTimePay = doubleTimeHours * hourlyRate * 2;
   const weeklyGross = regularPay + overtimePay + doubleTimePay;
 
@@ -185,6 +188,7 @@ function buildResult(
 
 export function calculateStandard(input: StandardInput): PayResult {
   const hourlyRate = toAmount(input.hourlyRate);
+  const overtimeRate = input.overtimeRate === 2 ? 2 : 1.5;
   const weeksPerYear = clamp(toAmount(input.weeksPerYear), 1, 52);
   const totalHours = clamp(toAmount(input.hoursPerWeek), 0, 168);
   const doubleTimeHours = clamp(toAmount(input.doubleTimeHours), 0, totalHours);
@@ -198,6 +202,7 @@ export function calculateStandard(input: StandardInput): PayResult {
     overtimeHours,
     doubleTimeHours,
     weeksPerYear,
+    overtimeRate,
   );
 }
 
