@@ -29,6 +29,9 @@ const initialFedStateAmount =
 	initial.weeklyGross * Math.max(0, initialTax.rate - initialFicaRate);
 const initialNetWeekly = initial.weeklyGross - initialTaxAmount;
 const initialRows = getFrequencyRows(initial, initialInput.hourlyRate, initialInput.weeksPerYear);
+const initialTakeHomeRate = 1 - initialTax.rate;
+const initialFedStateRate = Math.max(0, initialTax.rate - initialFicaRate);
+const initialMonthlyNet = initial.annualGross * initialTakeHomeRate / 12;
 
 const money = (value: number) =>
 	value.toLocaleString('en-US', {
@@ -40,6 +43,9 @@ const money = (value: number) =>
 
 const hours = (value: number) =>
 	value.toLocaleString('en-US', { maximumFractionDigits: 1 });
+
+const percent = (value: number) =>
+	`${(Math.round(value * 10000) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 })}%`;
 ---
 
 <section id="calculator" class="calculator" aria-labelledby="calculator-title">
@@ -291,6 +297,48 @@ const hours = (value: number) =>
 				</span>
 			</div>
 
+			<div class="split-card">
+				<div
+					class="split-bar"
+					id="pay-split-bar"
+					role="img"
+					aria-label="Gross pay split between take-home pay and taxes"
+				>
+					<span
+						class="split-seg take-home"
+						id="split-take-home"
+						style={`width:${initialTakeHomeRate * 100}%`}
+					></span>
+					<span
+						class="split-seg fed-state"
+						id="split-fed-state"
+						style={`width:${initialFedStateRate * 100}%`}
+					></span>
+					<span
+						class="split-seg fica"
+						id="split-fica"
+						style={`width:${initialFicaRate * 100}%`}
+					></span>
+				</div>
+				<div class="split-legend">
+					<span class="legend-item">
+						<i class="dot dot-take-home" aria-hidden="true"></i>
+						Take-Home <strong id="split-take-home-pct">{percent(initialTakeHomeRate)}</strong>
+						<em id="split-take-home-amt">{money(initialNetWeekly)}</em>
+					</span>
+					<span class="legend-item">
+						<i class="dot dot-fed-state" aria-hidden="true"></i>
+						Fed &amp; State <strong id="split-fed-state-pct">{percent(initialFedStateRate)}</strong>
+						<em id="split-fed-state-amt">{money(initialFedStateAmount)}</em>
+					</span>
+					<span class="legend-item">
+						<i class="dot dot-fica" aria-hidden="true"></i>
+						FICA <strong id="split-fica-pct">{percent(initialFicaRate)}</strong>
+						<em id="split-fica-amt">{money(initialFicaAmount)}</em>
+					</span>
+				</div>
+			</div>
+
 			<div class="stat-grid">
 				<div class="stat">
 					<span>Gross / week</span>
@@ -333,6 +381,40 @@ const hours = (value: number) =>
 				<div class="line line-net">
 					<span>Net weekly</span>
 					<span id="net-weekly-mini">{money(initialNetWeekly)}</span>
+				</div>
+			</div>
+
+			<div class="budget-card">
+				<div class="budget-head">
+					<span class="mono">Monthly budget</span>
+					<strong>Purchasing Power &amp; 50/30/20</strong>
+					<span class="budget-net" id="budget-monthly-net">{money(initialMonthlyNet)}/mo net</span>
+				</div>
+				<div
+					class="budget-bar"
+					role="img"
+					aria-label="Monthly budget split: 50 percent needs, 30 percent wants, 20 percent savings"
+				>
+					<span class="budget-seg needs" style="width:50%"></span>
+					<span class="budget-seg wants" style="width:30%"></span>
+					<span class="budget-seg savings" style="width:20%"></span>
+				</div>
+				<div class="budget-grid">
+					<div class="budget-item">
+						<span class="budget-label">Needs · 50%</span>
+						<strong id="budget-needs">{money(initialMonthlyNet * 0.5)}/mo</strong>
+						<span class="budget-rent">
+							Max Safe Rent (30% rule): <b id="budget-rent">{money(initialMonthlyNet * 0.3)}/mo</b>
+						</span>
+					</div>
+					<div class="budget-item">
+						<span class="budget-label">Wants · 30%</span>
+						<strong id="budget-wants">{money(initialMonthlyNet * 0.3)}/mo</strong>
+					</div>
+					<div class="budget-item">
+						<span class="budget-label">Savings &amp; Investing · 20%</span>
+						<strong id="budget-savings">{money(initialMonthlyNet * 0.2)}/mo</strong>
+					</div>
 				</div>
 			</div>
 
@@ -549,6 +631,34 @@ const hours = (value: number) =>
 			byId('gross-weekly').textContent = money(result.weeklyGross);
 			byId('net-annual').textContent = money(netAnnual);
 			byId('gross-annual').textContent = money(result.annualGross);
+
+			const takeHomeShare =
+				result.weeklyGross > 0 ? netWeekly / result.weeklyGross : 0;
+			const fedStateShare =
+				result.weeklyGross > 0 ? fedStateAmount / result.weeklyGross : 0;
+			const ficaShare =
+				result.weeklyGross > 0 ? ficaAmount / result.weeklyGross : 0;
+
+			byId('split-take-home').style.width = `${takeHomeShare * 100}%`;
+			byId('split-fed-state').style.width = `${fedStateShare * 100}%`;
+			byId('split-fica').style.width = `${ficaShare * 100}%`;
+			byId('split-take-home-pct').textContent = percent(takeHomeShare);
+			byId('split-fed-state-pct').textContent = percent(fedStateShare);
+			byId('split-fica-pct').textContent = percent(ficaShare);
+			byId('split-take-home-amt').textContent = money(netWeekly);
+			byId('split-fed-state-amt').textContent = money(fedStateAmount);
+			byId('split-fica-amt').textContent = money(ficaAmount);
+			byId('pay-split-bar').setAttribute(
+				'aria-label',
+				`Take-home ${percent(takeHomeShare)}, federal and state tax ${percent(fedStateShare)}, FICA ${percent(ficaShare)} of gross pay`,
+			);
+
+			const monthlyNet = netAnnual / 12;
+			byId('budget-monthly-net').textContent = `${money(monthlyNet)}/mo net`;
+			byId('budget-needs').textContent = `${money(monthlyNet * 0.5)}/mo`;
+			byId('budget-rent').textContent = `${money(monthlyNet * 0.3)}/mo`;
+			byId('budget-wants').textContent = `${money(monthlyNet * 0.3)}/mo`;
+			byId('budget-savings').textContent = `${money(monthlyNet * 0.2)}/mo`;
 
 			byId('result-label').textContent =
 				taxRate === 0 ? 'Estimated gross / week' : 'Estimated take-home / week';
@@ -1077,6 +1187,179 @@ const hours = (value: number) =>
 		font-variant-numeric: tabular-nums;
 	}
 
+	.split-card {
+		display: flex;
+		flex-direction: column;
+		gap: 9px;
+	}
+
+	.split-bar {
+		display: flex;
+		height: 12px;
+		border-radius: 9999px;
+		overflow: hidden;
+		background: var(--hairline-soft, #f2f2f2);
+	}
+
+	.split-seg {
+		display: block;
+		height: 100%;
+		transition: width 0.2s ease;
+	}
+
+	.split-seg.take-home {
+		background: #0f766e;
+	}
+
+	.split-seg.fed-state {
+		background: #d97706;
+	}
+
+	.split-seg.fica {
+		background: #94a3b8;
+	}
+
+	.split-legend {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px 14px;
+	}
+
+	.legend-item {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 11px;
+		line-height: 16px;
+		color: var(--mute, #8f8f8f);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.legend-item strong {
+		font-weight: 600;
+		color: var(--ink, #171717);
+	}
+
+	.legend-item em {
+		font-style: normal;
+	}
+
+	.dot {
+		flex: none;
+		width: 8px;
+		height: 8px;
+		border-radius: 9999px;
+	}
+
+	.dot-take-home {
+		background: #0f766e;
+	}
+
+	.dot-fed-state {
+		background: #d97706;
+	}
+
+	.dot-fica {
+		background: #94a3b8;
+	}
+
+	.budget-card {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		padding: 12px;
+		border: 1px solid var(--hairline, #ebebeb);
+		border-radius: 10px;
+		background: var(--canvas, #fafafa);
+	}
+
+	.budget-head {
+		display: flex;
+		align-items: baseline;
+		flex-wrap: wrap;
+		gap: 4px 10px;
+	}
+
+	.budget-head strong {
+		font-size: 14px;
+		font-weight: 600;
+		letter-spacing: -0.2px;
+		color: var(--ink, #171717);
+	}
+
+	.budget-net {
+		margin-left: auto;
+		font-size: 11px;
+		line-height: 16px;
+		color: var(--mute, #8f8f8f);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.budget-bar {
+		display: flex;
+		height: 10px;
+		border-radius: 9999px;
+		overflow: hidden;
+		background: var(--hairline-soft, #f2f2f2);
+	}
+
+	.budget-seg {
+		display: block;
+		height: 100%;
+	}
+
+	.budget-seg.needs {
+		background: #0f766e;
+	}
+
+	.budget-seg.wants {
+		background: #d97706;
+	}
+
+	.budget-seg.savings {
+		background: #64748b;
+	}
+
+	.budget-grid {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 8px;
+	}
+
+	.budget-item {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		padding: 8px;
+		border: 1px solid var(--hairline-soft, #f2f2f2);
+		border-radius: 8px;
+	}
+
+	.budget-label {
+		font-size: 11px;
+		line-height: 15px;
+		color: var(--mute, #8f8f8f);
+	}
+
+	.budget-item strong {
+		font-size: 14px;
+		font-weight: 500;
+		color: var(--ink, #171717);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.budget-rent {
+		font-size: 11px;
+		line-height: 15px;
+		color: var(--body, #4d4d4d);
+	}
+
+	.budget-rent b {
+		font-weight: 600;
+		color: var(--ink, #171717);
+		font-variant-numeric: tabular-nums;
+	}
+
 	.stat-grid {
 		display: grid;
 		grid-template-columns: repeat(3, 1fr);
@@ -1276,6 +1559,10 @@ const hours = (value: number) =>
 		}
 
 		.stat-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.budget-grid {
 			grid-template-columns: 1fr;
 		}
 
