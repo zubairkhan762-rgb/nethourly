@@ -133,8 +133,11 @@ const percent = (value: number) =>
 						<span class="advanced-plus" aria-hidden="true">+</span>
 						Overtime, Shift Bonus &amp; Weeks/Yr (Optional)
 					</span>
-					<span class="advanced-status" id="advanced-status" role="status" aria-live="polite" hidden>
-						Active
+					<span class="advanced-meta">
+						<span class="advanced-status" id="advanced-status" role="status" aria-live="polite" hidden>
+							Active
+						</span>
+						<span class="advanced-chevron" aria-hidden="true">▾</span>
 					</span>
 				</summary>
 
@@ -1320,9 +1323,18 @@ const percent = (value: number) =>
 	}
 
 	.advanced {
-		border: 1px solid var(--hairline, #ebebeb);
+		border: 1px solid rgba(15, 118, 110, 0.32);
 		border-radius: 12px;
-		background: var(--canvas, #fafafa);
+		background: rgba(15, 118, 110, 0.055);
+		transition:
+			border-color 0.18s ease,
+			background 0.18s ease,
+			box-shadow 0.18s ease;
+	}
+
+	.advanced:hover {
+		border-color: rgba(15, 118, 110, 0.6);
+		box-shadow: 0 1px 2px rgba(15, 118, 110, 0.12);
 	}
 
 	.advanced[open] {
@@ -1342,7 +1354,9 @@ const percent = (value: number) =>
 		color: var(--ink, #171717);
 		cursor: pointer;
 		list-style: none;
-		transition: background 0.15s ease;
+		transition:
+			background 0.18s ease,
+			box-shadow 0.18s ease;
 	}
 
 	.advanced-summary::-webkit-details-marker {
@@ -1350,11 +1364,12 @@ const percent = (value: number) =>
 	}
 
 	.advanced-summary:hover {
-		background: var(--hairline-soft, #f2f2f2);
+		background: rgba(15, 118, 110, 0.07);
+		box-shadow: 0 1px 2px rgba(15, 118, 110, 0.12);
 	}
 
 	.advanced[open] .advanced-summary {
-		border-bottom: 1px solid var(--hairline-soft, #f2f2f2);
+		border-bottom: 1px solid rgba(15, 118, 110, 0.2);
 		border-radius: 11px 11px 0 0;
 	}
 
@@ -1369,14 +1384,79 @@ const percent = (value: number) =>
 		display: grid;
 		place-items: center;
 		flex: none;
-		width: 20px;
-		height: 20px;
-		border: 1px solid var(--hairline, #ebebeb);
+		width: 22px;
+		height: 22px;
+		border: 1px solid #0f766e;
 		border-radius: 50%;
-		font-size: 14px;
+		background: #0f766e;
+		box-shadow: 0 1px 2px rgba(15, 118, 110, 0.28);
+		font-size: 15px;
+		font-weight: 600;
 		line-height: 1;
-		color: var(--mute, #8f8f8f);
-		transition: transform 0.2s ease;
+		color: #ffffff;
+	}
+
+	.advanced-meta {
+		display: inline-flex;
+		align-items: center;
+		flex: none;
+		gap: 8px;
+	}
+
+	.advanced-chevron {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		flex: none;
+		width: 22px;
+		height: 22px;
+		border-radius: 50%;
+		background: rgba(15, 118, 110, 0.12);
+		font-size: 12px;
+		line-height: 1;
+		color: #0f766e;
+		transition:
+			transform 0.2s ease,
+			background 0.18s ease;
+	}
+
+	.advanced[open] .advanced-chevron {
+		transform: rotate(180deg);
+	}
+
+	.advanced-summary:hover .advanced-chevron {
+		background: rgba(15, 118, 110, 0.2);
+	}
+
+	:global(html.dark) .advanced {
+		border-color: rgba(45, 212, 191, 0.34);
+		background: rgba(45, 212, 191, 0.08);
+	}
+
+	:global(html.dark) .advanced:hover {
+		border-color: rgba(45, 212, 191, 0.58);
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+	}
+
+	:global(html.dark) .advanced[open] {
+		background: var(--canvas-elevated);
+	}
+
+	:global(html.dark) .advanced-summary:hover {
+		background: rgba(45, 212, 191, 0.1);
+	}
+
+	:global(html.dark) .advanced[open] .advanced-summary {
+		border-bottom-color: rgba(45, 212, 191, 0.22);
+	}
+
+	:global(html.dark) .advanced-chevron {
+		background: rgba(45, 212, 191, 0.14);
+		color: #5eead4;
+	}
+
+	:global(html.dark) .advanced-summary:hover .advanced-chevron {
+		background: rgba(45, 212, 191, 0.22);
 	}
 
 	.advanced-status {
