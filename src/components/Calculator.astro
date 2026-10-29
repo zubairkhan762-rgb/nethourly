@@ -68,6 +68,31 @@ const hours = (value: number) =>
 				<span class="hint">Base rate before overtime premiums or deductions.</span>
 			</label>
 
+			<div class="field diff-field">
+				<div class="diff-head">
+					<label class="field-label" for="shift-differential">Shift differential (+$/hr)</label>
+					<span class="control control-prefix diff-control">
+						<span class="affix" aria-hidden="true">+$</span>
+						<input
+							id="shift-differential"
+							name="shift-differential"
+							type="number"
+							inputmode="decimal"
+							min="0"
+							max="50"
+							step="0.25"
+							value="0"
+						/>
+					</span>
+				</div>
+				<div class="diff-pills" role="group" aria-label="Shift differential presets">
+					<button type="button" class="diff-pill" data-differential="0" aria-pressed="true">$0</button>
+					<button type="button" class="diff-pill" data-differential="1.5" aria-pressed="false">+$1.50/hr</button>
+					<button type="button" class="diff-pill" data-differential="3" aria-pressed="false">+$3/hr</button>
+				</div>
+				<span class="hint">Optional night or weekend add-on. Applied before overtime and shift pay.</span>
+			</div>
+
 			<fieldset class="field mode-field">
 				<legend class="field-label">Shift type</legend>
 				<div class="segmented">
@@ -118,6 +143,36 @@ const hours = (value: number) =>
 					</label>
 				</div>
 				<p class="hint">Double-time hours sit inside the weekly total — holidays or California shifts past 12 hours.</p>
+				<div class="field ot-field">
+					<div class="ot-head">
+						<label class="field-label" for="overtime-hours">Overtime hours</label>
+						<span class="control control-suffix ot-control">
+							<input
+								id="overtime-hours"
+								name="overtime-hours"
+								type="number"
+								inputmode="decimal"
+								min="0"
+								max="40"
+								step="0.5"
+								value={initial.overtimeHours}
+								aria-label="Overtime hours"
+							/>
+							<span class="affix" aria-hidden="true">hrs</span>
+						</span>
+					</div>
+					<input
+						id="overtime-slider"
+						name="overtime-slider"
+						type="range"
+						min="0"
+						max="40"
+						step="0.5"
+						value={initial.overtimeHours}
+						aria-label="Overtime hours slider, 0 to 40 hours"
+					/>
+					<span class="range-labels"><span>0 hrs</span><span>40 hrs</span></span>
+				</div>
 			</div>
 
 			<div class="field-stack" data-panel="shift" hidden>
@@ -252,6 +307,9 @@ const hours = (value: number) =>
 			</div>
 
 			<div class="breakdown">
+				<p class="pay-split" id="pay-split" hidden>
+					Regular Pay: {money(initial.regularPay)} | Overtime Pay (1.5x/2x): +{money(initial.overtimePay + initial.doubleTimePay)} | Shift Diff: +{money(0)}
+				</p>
 				<div class="line">
 					<span>Regular <em id="regular-hours">{hours(initial.regularHours)} hrs</em></span>
 					<span id="regular-pay">{money(initial.regularPay)}</span>
@@ -263,6 +321,10 @@ const hours = (value: number) =>
 				<div class="line">
 					<span>Double time (2×) <em id="double-hours">{hours(initial.doubleTimeHours)} hrs</em></span>
 					<span id="double-pay">{money(initial.doubleTimePay)}</span>
+				</div>
+				<div class="line" id="shift-diff-line" hidden>
+					<span>Shift differential <em id="shift-diff-rate">+$0.00/hr</em></span>
+					<span id="shift-diff-pay">+{money(0)}</span>
 				</div>
 				<div class="line line-tax">
 					<span>Estimated taxes</span>
@@ -364,12 +426,47 @@ const hours = (value: number) =>
 			});
 		};
 
-		const render = () => {
-			const hourlyRate = readNumber(byId('hourly-rate'), 0, 10000, 0);
-			const weeksPerYear = readNumber(byId('weeks-year'), 1, 52, 52);
+		const syncDifferentialPills = (value) => {
+			form.querySelectorAll('[data-differential]').forEach((button) => {
+				const pillValue = Number.parseFloat(button.dataset.differential ?? '');
+				button.setAttribute('aria-pressed', pillValue === value ? 'true' : 'false');
+			});
+		};
+
+		const syncOvertimeInputs = (value, skip) => {
+			const normalized = clamp(value, 0, 40);
+			const numberInput = byId('overtime-hours');
+			const sliderInput = byId('overtime-slider');
+			if (numberInput && numberInput !== skip) numberInput.value = hours(normalized);
+			if (sliderInput && sliderInput !== skip) sliderInput.value = String(normalized);
+		};
+
+		const render = (event) => {
+			const target = event?.target;
 			const mode = activeMode();
 
+			if (
+				mode === 'standard' &&
+				target &&
+				(target.id === 'overtime-hours' || target.id === 'overtime-slider')
+			) {
+				const overtimeHours = readNumber(target, 0, 40, 0);
+				const doubleTimeHours = readNumber(byId('double-time'), 0, 168, 0);
+				const hoursInput = byId('hours-week');
+				if (hoursInput) {
+					hoursInput.value = String(
+						clamp(40 + overtimeHours + doubleTimeHours, 0, 168),
+					);
+				}
+			}
+
+			const baseHourlyRate = readNumber(byId('hourly-rate'), 0, 10000, 0);
+			const differential = readNumber(byId('shift-differential'), 0, 50, 0);
+			const hourlyRate = baseHourlyRate + differential;
+			const weeksPerYear = readNumber(byId('weeks-year'), 1, 52, 52);
+
 			let result;
+			let baseResult;
 			let payablePerShift = 0;
 
 			if (mode === 'shift') {
@@ -377,21 +474,33 @@ const hours = (value: number) =>
 				const mealDeduction = readNumber(byId('meal-deduction'), 0, 3, 3);
 				payablePerShift = Math.max(0, 24 - sleepDeduction - mealDeduction);
 
-				result = calculateShift({
-					hourlyRate,
+				const shiftInput = {
 					shiftsPerWeek: readNumber(byId('shifts-week'), 0, 7, 5),
 					sleepDeduction,
 					mealDeduction,
 					dailyOvertime: Boolean(byId('daily-overtime')?.checked),
 					weeksPerYear,
-				});
+				};
+
+				baseResult = calculateShift({ ...shiftInput, hourlyRate: baseHourlyRate });
+				result = calculateShift({ ...shiftInput, hourlyRate });
 			} else {
-				result = calculateStandard({
-					hourlyRate,
+				const standardInput = {
 					hoursPerWeek: readNumber(byId('hours-week'), 0, 168, 40),
 					doubleTimeHours: readNumber(byId('double-time'), 0, 168, 0),
 					weeksPerYear,
+				};
+
+				baseResult = calculateStandard({
+					...standardInput,
+					hourlyRate: baseHourlyRate,
 				});
+				result = calculateStandard({ ...standardInput, hourlyRate });
+			}
+
+			syncDifferentialPills(differential);
+			if (mode === 'standard') {
+				syncOvertimeInputs(result.overtimeHours, target);
 			}
 
 			const scenarioKey = byId('tax-scenario')?.value ?? 'standard';
@@ -447,12 +556,31 @@ const hours = (value: number) =>
 			byId('tax-breakdown-line').textContent =
 				`Gross: ${money(result.weeklyGross)} | FICA (7.65%): ${ficaAmount === 0 ? money(0) : `−${money(ficaAmount)}`} | Est. Fed & State Tax: ${fedStateAmount === 0 ? money(0) : `−${money(fedStateAmount)}`} | Take-Home Net: ${money(netWeekly)}`;
 
-			byId('regular-hours').textContent = `${hours(result.regularHours)} hrs`;
-			byId('regular-pay').textContent = money(result.regularPay);
-			byId('overtime-hours').textContent = `${hours(result.overtimeHours)} hrs`;
-			byId('overtime-pay').textContent = money(result.overtimePay);
-			byId('double-hours').textContent = `${hours(result.doubleTimeHours)} hrs`;
-			byId('double-pay').textContent = money(result.doubleTimePay);
+			byId('regular-hours').textContent = `${hours(baseResult.regularHours)} hrs`;
+			byId('regular-pay').textContent = money(baseResult.regularPay);
+			byId('overtime-hours').textContent = `${hours(baseResult.overtimeHours)} hrs`;
+			byId('overtime-pay').textContent = money(baseResult.overtimePay);
+			byId('double-hours').textContent = `${hours(baseResult.doubleTimeHours)} hrs`;
+			byId('double-pay').textContent = money(baseResult.doubleTimePay);
+
+			const shiftDiffPay = Math.max(0, result.weeklyGross - baseResult.weeklyGross);
+			const shiftDiffLine = byId('shift-diff-line');
+			if (shiftDiffLine) shiftDiffLine.hidden = differential <= 0;
+			byId('shift-diff-rate').textContent = `+${money(differential)}/hr`;
+			byId('shift-diff-pay').textContent = `+${money(shiftDiffPay)}`;
+
+			const paySplit = byId('pay-split');
+			if (paySplit) {
+				const hasOvertime =
+					baseResult.overtimeHours > 0 || baseResult.doubleTimeHours > 0;
+				const showSplit = hasOvertime || differential > 0;
+				paySplit.hidden = !showSplit;
+				if (showSplit) {
+					paySplit.textContent =
+						`Regular Pay: ${money(baseResult.regularPay)} | Overtime Pay (1.5x/2x): +${money(baseResult.overtimePay + baseResult.doubleTimePay)} | Shift Diff: +${money(shiftDiffPay)}`;
+				}
+			}
+
 			byId('tax-amount').textContent =
 				taxAmount === 0 ? money(0) : `−${money(taxAmount)}`;
 			byId('net-weekly-mini').textContent = money(netWeekly);
@@ -474,6 +602,15 @@ const hours = (value: number) =>
 		form.querySelectorAll('input[name="shift-mode"]').forEach((input) => {
 			input.addEventListener('change', () => {
 				syncPanels();
+				render();
+			});
+		});
+
+		form.querySelectorAll('[data-differential]').forEach((button) => {
+			button.addEventListener('click', () => {
+				const input = byId('shift-differential');
+				if (!input) return;
+				input.value = button.dataset.differential ?? '0';
 				render();
 			});
 		});
@@ -626,6 +763,89 @@ const hours = (value: number) =>
 		font-size: 12px;
 		line-height: 16px;
 		color: var(--mute, #8f8f8f);
+	}
+
+	.diff-field {
+		gap: 8px;
+	}
+
+	.diff-head,
+	.ot-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+	}
+
+	.diff-control {
+		width: 116px;
+		height: 36px;
+	}
+
+	.diff-control input,
+	.ot-control input {
+		font-size: 13px;
+	}
+
+	.diff-pills {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+	}
+
+	.diff-pill {
+		appearance: none;
+		padding: 4px 9px;
+		border: 1px solid var(--hairline, #ebebeb);
+		border-radius: 100px;
+		background: var(--canvas-elevated);
+		font: inherit;
+		font-size: 12px;
+		font-weight: 500;
+		color: var(--body, #4d4d4d);
+		cursor: pointer;
+		transition:
+			background 0.15s ease,
+			border-color 0.15s ease,
+			color 0.15s ease;
+	}
+
+	.diff-pill:hover {
+		border-color: var(--hairline-strong, #d4d4d4);
+		color: var(--ink, #171717);
+	}
+
+	.diff-pill[aria-pressed='true'] {
+		background: var(--ink, #171717);
+		border-color: var(--ink, #171717);
+		color: var(--on-ink);
+	}
+
+	.ot-field {
+		gap: 8px;
+		padding-top: 12px;
+		border-top: 1px solid var(--hairline-soft, #f2f2f2);
+	}
+
+	.ot-control {
+		width: 120px;
+		height: 36px;
+	}
+
+	.ot-field input[type='range'] {
+		width: 100%;
+		height: 20px;
+		margin: 0;
+		accent-color: var(--ink, #171717);
+		cursor: pointer;
+	}
+
+	.range-labels {
+		display: flex;
+		justify-content: space-between;
+		font-size: 11px;
+		line-height: 16px;
+		color: var(--faint, #a1a1a1);
 	}
 
 	.mode-field {
@@ -889,6 +1109,21 @@ const hours = (value: number) =>
 		display: flex;
 		flex-direction: column;
 		gap: 2px;
+	}
+
+	.pay-split {
+		margin: 0 0 8px;
+		padding-bottom: 10px;
+		border-bottom: 1px solid var(--hairline-soft, #f2f2f2);
+		font-size: 12px;
+		line-height: 17px;
+		color: var(--body, #4d4d4d);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.pay-split[hidden],
+	.line[hidden] {
+		display: none;
 	}
 
 	.line {
