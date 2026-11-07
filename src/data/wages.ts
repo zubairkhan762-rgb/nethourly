@@ -191,7 +191,9 @@ export const WAGES: WageEntry[] = allRates.map((rate) => ({
 	note: noteFor(rate),
 }));
 
-const popularRates = [7.25, 10, 12, 15, 16, 17, 18, 20, 22, 25, 28, 30, 35, 40, 45, 50];
+const popularRates = [
+	7.25, 10, 12, 15, 16, 18, 19, 20, 21, 22, 23, 24, 25, 28, 30, 32.5, 35, 40, 45, 50,
+];
 
 export const POPULAR_WAGES: WageEntry[] = popularRates
 	.map((rate) => WAGES.find((wage) => wage.rate === rate))

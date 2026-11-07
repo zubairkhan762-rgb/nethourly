@@ -202,8 +202,8 @@ const scheduleRows = [
 	};
 });
 
-const title = `${wage.display} an Hour is How Much a Year? (Gross & Net After Taxes)`;
-const description = `${wage.display}/hr pays ${money(stats.annual)} gross and about ${money(netAnnual)} take-home a year. ${wageTier.meta}`;
+const title = `${wage.display} an Hour is How Much a Year, Month & Bi-Weekly After Taxes? (2026 Take-Home)`;
+const description = `${wage.display}/hour is ${money(stats.annual)}/year before taxes — but your real take-home pay is ~${money(netAnnual)}/year (${money(netMonthly)}/month or ${money(netBiWeekly)} bi-weekly) after 18% standard tax. See no-tax vs high-tax state paychecks & overtime.`;
 
 const breadcrumbs = [
 	{ label: 'Home', href: '/' },
@@ -213,8 +213,8 @@ const breadcrumbs = [
 
 const faqs = [
 	{
-		question: `How much is ${wage.display} an hour per year in the US?`,
-		answer: `At ${wage.display} an hour, working 40 hours a week for 52 weeks, annual gross pay is ${money(stats.annual)} before taxes. After an estimated 18% for standard federal income tax and FICA, take-home pay is about ${money(netAnnual)} per year. This assumes full-time hours, no unpaid time off, and no state income tax.`,
+		question: `How much is ${wage.display} an hour a year after taxes?`,
+		answer: `At ${wage.display} an hour, working 40 hours a week for 52 weeks, annual gross pay is ${money(stats.annual)} before taxes. After an estimated 18% for standard federal income tax and FICA, take-home pay is about ${money(netAnnual)} per year, or roughly ${money(netMonthly)} per month. This assumes full-time hours, no unpaid time off, and no state income tax.`,
 	},
 	{
 		question: `How much is a bi-weekly paycheck at ${wage.display} an hour?`,
@@ -225,8 +225,8 @@ const faqs = [
 		answer: `Time and a half at ${wage.display} an hour is ${rateMoney(stats.overtimeRate)} per hour (${wage.display} × 1.5). Double time is ${rateMoney(stats.doubleTimeRate)} per hour (${wage.display} × 2). Five overtime hours in a week add ${money(fiveHoursOvertime)} in gross overtime pay, raising weekly gross from ${money(stats.weekly)} to ${money(weeklyWithFiveOvertime)}.`,
 	},
 	{
-		question: `How much is ${wage.display} an hour per month and per week?`,
-		answer: `At 40 hours a week, ${wage.display} an hour pays ${money(stats.weekly)} gross per week and ${money(stats.monthly)} gross per month. After an estimated 18% tax rate, take-home pay is about ${money(netWeekly)} net per week and ${money(netMonthly)} net per month.`,
+		question: `How much is ${wage.display} an hour per month after taxes?`,
+		answer: `At 40 hours a week, ${wage.display} an hour pays ${money(stats.monthly)} gross per month. After an estimated 18% tax rate, take-home pay is about ${money(netMonthly)} net per month, or ${money(netWeekly)} net per week. A bi-weekly schedule produces 26 checks of about ${money(netBiWeekly)} net each.`,
 	},
 	{
 		question: `Is ${wage.display} an hour a livable wage in the United States?`,
@@ -268,6 +268,7 @@ const faqs = [
 					<strong>{money(stats.biWeekly)} bi-weekly</strong>. After standard US federal &amp;
 					FICA taxes (~18%), your estimated take-home pay is{' '}
 					<strong>{money(netAnnual)}/year</strong> (
+					<strong>{money(netMonthly)} per month</strong> or{' '}
 					<strong>{money(netBiWeekly)} per bi-weekly paycheck</strong>).
 				</p>
 			</div>
@@ -282,12 +283,20 @@ const faqs = [
 					<strong>{money(stats.biWeekly)}</strong>
 				</li>
 				<li>
+					<span>Monthly gross</span>
+					<strong>{money(stats.monthly)}</strong>
+				</li>
+				<li>
 					<span>Annual take-home</span>
 					<strong>{money(netAnnual)}</strong>
 				</li>
 				<li>
 					<span>Bi-weekly take-home</span>
 					<strong>{money(netBiWeekly)}</strong>
+				</li>
+				<li>
+					<span>Monthly take-home</span>
+					<strong>{money(netMonthly)}</strong>
 				</li>
 			</ul>
 		</div>
@@ -679,7 +688,7 @@ const faqs = [
 	<section class="content-section" id="nearby-wages">
 		<div class="shell">
 			<div class="section-head">
-				<p class="eyebrow mono">Nearby wages</p>
+				<p class="eyebrow mono">Nearby hourly rates</p>
 				<h2>Compare wages around {wage.display} an hour.</h2>
 				<p>
 					Small rate changes compound across a full year. Jump to a nearby hourly rate to
@@ -831,7 +840,7 @@ const faqs = [
 
 	.quick-stats {
 		display: grid;
-		grid-template-columns: repeat(4, minmax(0, 1fr));
+		grid-template-columns: repeat(3, minmax(0, 1fr));
 		gap: 8px;
 		width: 100%;
 		max-width: 820px;
