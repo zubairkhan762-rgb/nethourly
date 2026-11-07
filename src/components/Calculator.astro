@@ -46,6 +46,13 @@ const hours = (value: number) =>
 
 const percent = (value: number) =>
 	`${(Math.round(value * 10000) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 })}%`;
+
+const wagePills = Array.from(
+	new Set([15, 20, 25, 30, 35, 40, hourlyRate]),
+).sort((a, b) => a - b);
+
+const wagePillLabel = (value: number) =>
+	Number.isInteger(value) ? `$${value}` : `$${value.toFixed(2)}`;
 ---
 
 <section id="calculator" class="calculator" aria-labelledby="calculator-title">
@@ -73,14 +80,14 @@ const percent = (value: number) =>
 						/>
 					</span>
 					<div class="wage-pills" role="group" aria-label="Quick-select hourly wage">
-						{[15, 20, 25, 30, 35, 40].map((value) => (
+						{wagePills.map((value) => (
 							<button
 								type="button"
 								class="wage-pill"
 								data-wage={value}
 								aria-pressed={value === initialInput.hourlyRate ? 'true' : 'false'}
 							>
-								${value}
+								{wagePillLabel(value)}
 							</button>
 						))}
 					</div>

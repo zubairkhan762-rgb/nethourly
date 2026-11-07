@@ -77,10 +77,11 @@ const stateFloorNote =
 
 const noStateTax = estimateTakeHome(stats.annual, 'noState');
 const moderateStateTax = estimateTakeHome(stats.annual, 'moderateState');
-const highStateTax = estimateTakeHome(stats.annual, 'highState');
-const noStateNetAnnual = noStateTax.netAnnual;
+const noIncomeTaxTier = WAGE_TAX_TIERS.find((tier) => tier.key === 'no-income-tax')!;
+const highTaxTier = WAGE_TAX_TIERS.find((tier) => tier.key === 'high-tax')!;
+const noStateNetAnnual = stats.annual * (1 - noIncomeTaxTier.rate);
 const moderateStateNetAnnual = moderateStateTax.netAnnual;
-const highStateNetAnnual = highStateTax.netAnnual;
+const highStateNetAnnual = stats.annual * (1 - highTaxTier.rate);
 const stateTaxGap = noStateNetAnnual - highStateNetAnnual;
 const US_MEDIAN_INDIVIDUAL_INCOME = 50000;
 const medianGap = stats.annual - US_MEDIAN_INDIVIDUAL_INCOME;
