@@ -815,7 +815,7 @@ const wagePillLabel = (value: number) =>
 			const payableReadout = byId('payable-per-shift');
 			if (payableReadout) payableReadout.textContent = `${hours(payablePerShift)} hrs`;
 
-			const rows = getFrequencyRows(result, hourlyRate, weeksPerYear);
+			const rows = getFrequencyRows(result, baseHourlyRate, weeksPerYear);
 			rows.forEach((row) => {
 				const periods = byId(`freq-${row.key}-periods`);
 				const gross = byId(`freq-${row.key}-gross`);

@@ -414,13 +414,16 @@ export function getFrequencyRows(
   const weekly = result.weeklyGross;
   const annual = result.annualGross;
   const hoursPerYear = Math.round(result.totalHours * weeksPerYear);
+  const baseHourlyRate =
+    toAmount(hourlyRate) ||
+    (result.regularHours > 0 ? result.regularPay / result.regularHours : 0);
 
   return [
     {
       key: 'hourly',
       label: 'Hourly',
       periodsLabel: `${hoursPerYear.toLocaleString('en-US')} hrs`,
-      gross: toAmount(hourlyRate),
+      gross: baseHourlyRate,
     },
     {
       key: 'daily',
