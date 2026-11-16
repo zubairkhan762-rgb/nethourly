@@ -498,8 +498,8 @@ const wagePillLabel = (value: number) =>
 					<tr>
 						<th scope="col">Frequency</th>
 						<th scope="col">Per year</th>
-						<th scope="col" class="num">Gross</th>
-						<th scope="col" class="num">Take-home</th>
+						<th scope="col" class="num text-right">Gross</th>
+						<th scope="col" class="num text-right">Take-home</th>
 					</tr>
 				</thead>
 				<tbody id="frequency-body">
@@ -507,8 +507,8 @@ const wagePillLabel = (value: number) =>
 						<tr>
 							<td>{row.label}</td>
 							<td class="muted" id={`freq-${row.key}-periods`}>{row.periodsLabel}</td>
-							<td class="num" id={`freq-${row.key}-gross`}>{money(row.gross)}</td>
-							<td class="num" id={`freq-${row.key}-net`}>
+							<td class="num text-right" id={`freq-${row.key}-gross`}>{money(row.gross)}</td>
+							<td class="num text-right" id={`freq-${row.key}-net`}>
 								{money(row.gross * (1 - initialTax.rate))}
 							</td>
 						</tr>
