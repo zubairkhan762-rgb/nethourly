@@ -491,15 +491,15 @@ const wagePillLabel = (value: number) =>
 			</div>
 			<p class="hint">Annual gross converted across 52 weeks. Semi-monthly pays 24 times; bi-weekly pays 26.</p>
 		</div>
-		<div class="table-scroll mx-auto w-full max-w-2xl">
-			<table class="w-full">
+		<div class="table-scroll">
+			<table class="w-full table-fixed">
 				<caption class="sr-only">Estimated gross and net pay by frequency</caption>
 				<thead>
 					<tr>
-						<th scope="col">Frequency</th>
-						<th scope="col">Per year</th>
-						<th scope="col" class="num text-right! tabular-nums">Gross</th>
-						<th scope="col" class="num text-right! tabular-nums">Take-home</th>
+						<th scope="col" class="w-1/4 text-left">Frequency</th>
+						<th scope="col" class="w-1/4 text-left">Per year</th>
+						<th scope="col" class="num w-1/4 text-right! tabular-nums">Gross</th>
+						<th scope="col" class="num w-1/4 text-right! tabular-nums">Take-home</th>
 					</tr>
 				</thead>
 				<tbody id="frequency-body">
@@ -1957,6 +1957,16 @@ const wagePillLabel = (value: number) =>
 		}
 	}
 
+	thead th:first-child,
+	tbody td:first-child {
+		padding-left: 0;
+	}
+
+	thead th:last-child,
+	tbody td:last-child {
+		padding-right: 0;
+	}
+
 	@media (max-width: 600px) {
 		.form-panel,
 		.result-panel,
@@ -2011,16 +2021,6 @@ const wagePillLabel = (value: number) =>
 
 		tbody td {
 			padding: 10px 3px;
-		}
-
-		thead th:first-child,
-		tbody td:first-child {
-			padding-left: 0;
-		}
-
-		thead th:last-child,
-		tbody td:last-child {
-			padding-right: 0;
 		}
 	}
 </style>
