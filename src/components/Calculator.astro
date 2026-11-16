@@ -492,14 +492,14 @@ const wagePillLabel = (value: number) =>
 			<p class="hint">Annual gross converted across 52 weeks. Semi-monthly pays 24 times; bi-weekly pays 26.</p>
 		</div>
 		<div class="table-scroll">
-			<table class="w-full table-fixed">
+			<table class="frequency-table">
 				<caption class="sr-only">Estimated gross and net pay by frequency</caption>
 				<thead>
 					<tr>
-						<th scope="col" class="w-1/4 text-left">Frequency</th>
-						<th scope="col" class="w-1/4 text-left">Per year</th>
-						<th scope="col" class="num w-1/4 text-right! tabular-nums">Gross</th>
-						<th scope="col" class="num w-1/4 text-right! tabular-nums">Take-home</th>
+						<th scope="col">Frequency</th>
+						<th scope="col">Per year</th>
+						<th scope="col">Gross</th>
+						<th scope="col">Take-home</th>
 					</tr>
 				</thead>
 				<tbody id="frequency-body">
@@ -507,8 +507,8 @@ const wagePillLabel = (value: number) =>
 						<tr>
 							<td>{row.label}</td>
 							<td class="muted" id={`freq-${row.key}-periods`}>{row.periodsLabel}</td>
-							<td class="num text-right! tabular-nums" id={`freq-${row.key}-gross`}>{money(row.gross)}</td>
-							<td class="num text-right! tabular-nums" id={`freq-${row.key}-net`}>
+							<td id={`freq-${row.key}-gross`}>{money(row.gross)}</td>
+							<td id={`freq-${row.key}-net`}>
 								{money(row.gross * (1 - initialTax.rate))}
 							</td>
 						</tr>
@@ -1887,6 +1887,40 @@ const wagePillLabel = (value: number) =>
 		border-collapse: collapse;
 		font-size: 14px;
 		font-variant-numeric: tabular-nums;
+	}
+
+	.frequency-table {
+		width: 100% !important;
+		table-layout: fixed !important;
+		border-collapse: collapse !important;
+	}
+
+	.frequency-table thead th:nth-child(1),
+	.frequency-table tbody td:nth-child(1) {
+		width: 28% !important;
+		text-align: left !important;
+		padding-left: 0 !important;
+	}
+
+	.frequency-table thead th:nth-child(2),
+	.frequency-table tbody td:nth-child(2) {
+		width: 28% !important;
+		text-align: left !important;
+	}
+
+	.frequency-table thead th:nth-child(3),
+	.frequency-table tbody td:nth-child(3) {
+		width: 26% !important;
+		text-align: left !important;
+		font-variant-numeric: tabular-nums !important;
+	}
+
+	.frequency-table thead th:nth-child(4),
+	.frequency-table tbody td:nth-child(4) {
+		width: 18% !important;
+		text-align: right !important;
+		padding-right: 0 !important;
+		font-variant-numeric: tabular-nums !important;
 	}
 
 	thead th {
