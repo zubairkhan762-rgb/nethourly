@@ -119,15 +119,15 @@ const description =
 
 			<div class="table-card">
 				<div class="table-scroll">
-					<table>
+					<table class="w-full">
 						<caption class="sr-only">Key US state minimum wages</caption>
 						<thead>
 							<tr>
 								<th scope="col">State</th>
 								<th scope="col">Code</th>
 								<th scope="col">Notes</th>
-								<th scope="col" class="num">Minimum wage</th>
-								<th scope="col" class="num">Annual at 40 hrs</th>
+								<th scope="col" class="num text-right! tabular-nums">Minimum wage</th>
+								<th scope="col" class="num text-right! tabular-nums">Annual at 40 hrs</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -136,8 +136,8 @@ const description =
 									<th scope="row">{item.state}</th>
 									<td>{item.abbr}</td>
 									<td class="muted">{item.note}</td>
-									<td class="num">{rateMoney(item.rate)}</td>
-									<td class="num">{money(item.rate * 2080)}</td>
+									<td class="num text-right! tabular-nums">{rateMoney(item.rate)}</td>
+									<td class="num text-right! tabular-nums">{money(item.rate * 2080)}</td>
 								</tr>
 							))}
 						</tbody>
@@ -488,6 +488,12 @@ const description =
 
 	.num {
 		text-align: right;
+	}
+
+	thead th.num,
+	tbody td.num {
+		text-align: right;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.muted {

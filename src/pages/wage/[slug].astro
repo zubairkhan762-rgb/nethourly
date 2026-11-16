@@ -330,7 +330,7 @@ const faqs = [
 
 			<div class="table-card">
 				<div class="table-scroll">
-					<table>
+					<table class="w-full">
 						<caption class="sr-only">
 							Gross and estimated take-home pay at {wage.display} an hour across tax tiers
 						</caption>
@@ -338,7 +338,7 @@ const faqs = [
 							<tr>
 								<th scope="col">Pay period</th>
 								{WAGE_TAX_TIERS.map((tier) => (
-									<th scope="col" class="num">
+									<th scope="col" class="num text-right! tabular-nums">
 										<span class="th-label">{tier.label}</span>
 										<span class="th-note">{tier.note}</span>
 									</th>
@@ -353,7 +353,7 @@ const faqs = [
 										<span class="row-note">{period.note}</span>
 									</th>
 									{WAGE_TAX_TIERS.map((tier) => (
-										<td class="num">{money(period.value * (1 - tier.rate))}</td>
+										<td class="num text-right! tabular-nums">{money(period.value * (1 - tier.rate))}</td>
 									))}
 								</tr>
 							))}
@@ -437,23 +437,23 @@ const faqs = [
 					</p>
 				</div>
 				<div class="table-scroll">
-					<table>
+					<table class="w-full">
 						<caption class="sr-only">Weekly and annual pay with overtime</caption>
 						<thead>
 							<tr>
 								<th scope="col">Overtime hours</th>
-								<th scope="col" class="num">Overtime pay</th>
-								<th scope="col" class="num">Weekly total</th>
-								<th scope="col" class="num">Annual total</th>
+								<th scope="col" class="num text-right! tabular-nums">Overtime pay</th>
+								<th scope="col" class="num text-right! tabular-nums">Weekly total</th>
+								<th scope="col" class="num text-right! tabular-nums">Annual total</th>
 							</tr>
 						</thead>
 						<tbody>
 							{overtimeRows.map((row) => (
 								<tr>
 									<th scope="row">{row.hours} hrs/week</th>
-									<td class="num">{money(row.overtimePay)}</td>
-									<td class="num">{money(row.weekly)}</td>
-									<td class="num">{money(row.annual)}</td>
+									<td class="num text-right! tabular-nums">{money(row.overtimePay)}</td>
+									<td class="num text-right! tabular-nums">{money(row.weekly)}</td>
+									<td class="num text-right! tabular-nums">{money(row.annual)}</td>
 								</tr>
 							))}
 						</tbody>
@@ -485,27 +485,27 @@ const faqs = [
 
 			<div class="table-card">
 				<div class="table-scroll">
-					<table>
+					<table class="w-full">
 						<caption class="sr-only">
 							Weekly, monthly, and annual pay by weekly hours at {wage.display} an hour
 						</caption>
 						<thead>
 							<tr>
 								<th scope="col">Schedule</th>
-								<th scope="col" class="num">Hours/week</th>
-								<th scope="col" class="num">Weekly</th>
-								<th scope="col" class="num">Monthly</th>
-								<th scope="col" class="num">Annual</th>
+								<th scope="col" class="num text-right! tabular-nums">Hours/week</th>
+								<th scope="col" class="num text-right! tabular-nums">Weekly</th>
+								<th scope="col" class="num text-right! tabular-nums">Monthly</th>
+								<th scope="col" class="num text-right! tabular-nums">Annual</th>
 							</tr>
 						</thead>
 						<tbody>
 							{scheduleRows.map((row) => (
 								<tr>
 									<th scope="row">{row.label}</th>
-									<td class="num">{row.hours}</td>
-									<td class="num">{money(row.weekly)}</td>
-									<td class="num">{money(row.monthly)}</td>
-									<td class="num">{money(row.annual)}</td>
+									<td class="num text-right! tabular-nums">{row.hours}</td>
+									<td class="num text-right! tabular-nums">{money(row.weekly)}</td>
+									<td class="num text-right! tabular-nums">{money(row.monthly)}</td>
+									<td class="num text-right! tabular-nums">{money(row.annual)}</td>
 								</tr>
 							))}
 						</tbody>
@@ -536,14 +536,14 @@ const faqs = [
 
 			<div class="table-card">
 				<div class="table-scroll">
-					<table>
+					<table class="w-full">
 						<caption class="sr-only">State minimum wage comparison</caption>
 						<thead>
 							<tr>
 								<th scope="col">State</th>
-								<th scope="col" class="num">Minimum wage</th>
-								<th scope="col" class="num">Annual at 40 hrs</th>
-								<th scope="col" class="num">vs. {wage.display}</th>
+								<th scope="col" class="num text-right! tabular-nums">Minimum wage</th>
+								<th scope="col" class="num text-right! tabular-nums">Annual at 40 hrs</th>
+								<th scope="col" class="num text-right! tabular-nums">vs. {wage.display}</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -552,9 +552,9 @@ const faqs = [
 								return (
 									<tr>
 										<th scope="row">{item.state}</th>
-										<td class="num">{rateMoney(item.rate)}</td>
-										<td class="num">{money(item.rate * 2080)}</td>
-										<td class="num">
+										<td class="num text-right! tabular-nums">{rateMoney(item.rate)}</td>
+										<td class="num text-right! tabular-nums">{money(item.rate * 2080)}</td>
+										<td class="num text-right! tabular-nums">
 											{difference === 0
 												? 'Parity'
 												: `${difference > 0 ? '+' : '−'}${rateMoney(Math.abs(difference))}`}
@@ -1022,6 +1022,12 @@ const faqs = [
 
 	.num {
 		text-align: right;
+	}
+
+	thead th.num,
+	tbody td.num {
+		text-align: right;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.table-footnote {

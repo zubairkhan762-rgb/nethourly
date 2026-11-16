@@ -303,25 +303,25 @@ const faqs = [
 					</p>
 				</div>
 				<div class="table-scroll">
-					<table>
+					<table class="w-full">
 						<caption class="sr-only">
 							Time and a half and double time rates for hourly wages from $15 to $40
 						</caption>
 						<thead>
 							<tr>
 								<th scope="col">Hourly wage</th>
-								<th scope="col" class="num">Time and a half · 1.5×</th>
-								<th scope="col" class="num">Double time · 2×</th>
-								<th scope="col" class="num">40-hr week</th>
+								<th scope="col" class="num text-right! tabular-nums">Time and a half · 1.5×</th>
+								<th scope="col" class="num text-right! tabular-nums">Double time · 2×</th>
+								<th scope="col" class="num text-right! tabular-nums">40-hr week</th>
 							</tr>
 						</thead>
 						<tbody>
 							{referenceRates.map((rate) => (
 								<tr>
 									<th scope="row">{money(rate)}</th>
-									<td class="num">{money(rate * 1.5)}</td>
-									<td class="num">{money(rate * 2)}</td>
-									<td class="num muted">{money(rate * 40)}</td>
+									<td class="num text-right! tabular-nums">{money(rate * 1.5)}</td>
+									<td class="num text-right! tabular-nums">{money(rate * 2)}</td>
+									<td class="num muted text-right! tabular-nums">{money(rate * 40)}</td>
 								</tr>
 							))}
 						</tbody>
@@ -1319,6 +1319,12 @@ const faqs = [
 
 	.num {
 		text-align: right;
+	}
+
+	thead th.num,
+	tbody td.num {
+		text-align: right;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.muted {
